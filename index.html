@@ -1,0 +1,2739 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ONANDERFINANCE — Финансовый Терминал</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN (Stable UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons CDN (Stable UMD) -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.344.0/dist/umd/lucide.min.js"></script>
+  <!-- 1. Сначала подключаем библиотеку Telegram SDK -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- 2. В отдельном теге пишем код инициализации -->
+<script>
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand(); // Разворачивает окно на весь экран телефона
+  }
+</script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    :root {
+      --font-main: 'Plus Jakarta Sans', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-color: #06080e;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.12) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.08) 0px, transparent 50%);
+      background-attachment: fixed;
+      color: #f1f5f9;
+      min-height: 100vh;
+    }
+
+    .font-mono { font-family: var(--font-mono); }
+
+    /* Custom Glassmorphism */
+    .glass-panel {
+      background: rgba(13, 18, 30, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-input {
+      background: rgba(7, 10, 19, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      transition: all 0.2s ease;
+    }
+    .glass-input:focus {
+      border-color: rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+      outline: none;
+    }
+
+    /* Privacy Blur Mode */
+    body.privacy-active .sensitive-val {
+      filter: blur(8px);
+      user-select: none;
+      pointer-events: none;
+      transition: filter 0.25s ease;
+    }
+    .sensitive-val {
+      transition: filter 0.25s ease;
+    }
+
+    /* Equalizer Bars */
+    .eq-bar {
+      width: 3px;
+      background: #fbbf24;
+      border-radius: 2px;
+      animation: eqBounce 0.8s ease-in-out infinite alternate;
+    }
+    .eq-bar:nth-child(1) { height: 6px; animation-delay: 0.1s; }
+    .eq-bar:nth-child(2) { height: 14px; animation-delay: 0.3s; }
+    .eq-bar:nth-child(3) { height: 10px; animation-delay: 0.2s; }
+    .eq-bar:nth-child(4) { height: 15px; animation-delay: 0.4s; }
+    
+    .eq-paused .eq-bar {
+      animation-play-state: paused !important;
+      height: 4px !important;
+    }
+
+    @keyframes eqBounce {
+      0% { height: 3px; }
+      100% { height: 16px; }
+    }
+
+    /* Quote Fade Transition */
+    .quote-fade {
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+    .quote-hidden {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- Left Floating Dock: Big Risk Calculator Launcher -->
+  <aside class="fixed left-3 sm:left-5 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-2 p-2.5 rounded-3xl glass-panel border border-purple-500/40 shadow-2xl backdrop-blur-2xl">
+    <div class="text-[9px] uppercase font-black tracking-widest text-purple-400 select-none text-center">РИСК</div>
+    
+    <button type="button" id="openBigCalculatorBtn" class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex flex-col items-center justify-center bg-gradient-to-tr from-purple-700/60 via-indigo-600/50 to-sky-500/50 text-purple-100 hover:text-white border-2 border-purple-400/60 hover:border-sky-300 shadow-xl shadow-purple-900/40 active:scale-95 transition-all hover:scale-105" title="Открыть PRO Калькулятор Риска и Плеча">
+      <div class="absolute -top-1.5 -right-1.5 bg-gradient-to-r from-amber-500 to-rose-500 text-[8px] font-black text-white px-1.5 py-0.5 rounded-full shadow">PRO</div>
+      <i data-lucide="calculator" class="w-7 h-7 sm:w-8 sm:h-8 text-purple-200 group-hover:text-sky-200 transition-transform group-hover:scale-110"></i>
+      <span class="text-[9px] sm:text-[10px] font-black font-mono uppercase mt-1 tracking-wider text-purple-200 group-hover:text-white">CALC</span>
+    </button>
+  </aside>
+
+  <!-- Right Floating Dock: Column Switcher & View Modes -->
+  <aside class="fixed right-3 sm:right-5 top-1/2 -translate-y-1/2 z-40 flex flex-col items-center gap-1.5 p-2 rounded-3xl glass-panel border border-white/10 shadow-2xl backdrop-blur-2xl">
+    <div class="text-[8px] uppercase font-bold tracking-widest text-slate-400 py-1 select-none">ВИД</div>
+    
+    <!-- All Grid View -->
+    <button type="button" id="viewAllBtn" class="view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex flex-col items-center group bg-sky-500/20 text-sky-300 border border-sky-500/40" data-view="all" title="Показать все 4 колонки">
+      <i data-lucide="layout-grid" class="w-4 h-4"></i>
+      <span class="text-[8px] font-semibold mt-0.5">Все</span>
+    </button>
+
+    <!-- Card Only -->
+    <button type="button" id="viewCardBtn" class="view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-sky-300 hover:bg-sky-500/10 active:scale-95 transition flex flex-col items-center group" data-view="card" title="Только КАРТА (₴)">
+      <i data-lucide="credit-card" class="w-4 h-4 text-sky-400"></i>
+      <span class="text-[8px] font-semibold mt-0.5">Карта</span>
+    </button>
+
+    <!-- Crypto Only -->
+    <button type="button" id="viewCryptoBtn" class="view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-purple-300 hover:bg-purple-500/10 active:scale-95 transition flex flex-col items-center group" data-view="crypto" title="Только КРИПТА ($)">
+      <i data-lucide="candlestick-chart" class="w-4 h-4 text-purple-400"></i>
+      <span class="text-[8px] font-semibold mt-0.5">Крипта</span>
+    </button>
+
+    <!-- Savings (Отложенные) Only -->
+    <button type="button" id="viewSavingsBtn" class="view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:scale-95 transition flex flex-col items-center group" data-view="savings" title="Только ОТЛОЖЕННЫЕ (Копилки)">
+      <i data-lucide="piggy-bank" class="w-4 h-4 text-emerald-400"></i>
+      <span class="text-[8px] font-semibold mt-0.5">Копилка</span>
+    </button>
+
+    <!-- Debt Only -->
+    <button type="button" id="viewDebtBtn" class="view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-amber-300 hover:bg-amber-500/10 active:scale-95 transition flex flex-col items-center group" data-view="debt" title="Только ДОЛГИ (₴ / $)">
+      <i data-lucide="hand-coins" class="w-4 h-4 text-amber-400"></i>
+      <span class="text-[8px] font-semibold mt-0.5">Долги</span>
+    </button>
+
+    <div class="w-6 h-px bg-white/10 my-0.5"></div>
+
+    <button type="button" id="scrollTopBtn" class="p-2 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 transition" title="Наверх">
+      <i data-lucide="arrow-up" class="w-4 h-4"></i>
+    </button>
+  </aside>
+
+  <!-- MAIN HEADER -->
+  <header class="border-b border-white/10 bg-slate-950/80 backdrop-blur-xl sticky top-0 z-30">
+    <div class="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand, Rate & Quick Converter -->
+      <div class="flex items-center gap-3 relative">
+        <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-extrabold tracking-tight bg-gradient-to-r from-sky-400 via-purple-300 to-emerald-300 bg-clip-text text-transparent">
+              ONANDERFINANCE
+            </h1>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/30">v2.5 PRO</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+            <span>Курс USD:</span>
+            <div class="flex items-center gap-1 font-mono text-slate-200">
+              <span>1$ =</span>
+              <input type="number" id="usdUahRateInput" step="0.1" value="41.5" class="glass-input w-16 px-1.5 py-0.5 rounded-lg text-xs font-bold text-center focus:border-sky-400">
+              <span>₴</span>
+            </div>
+            <!-- Quick Converter Trigger -->
+            <button type="button" id="toggleConverterBtn" class="px-2 py-0.5 rounded-lg bg-white/5 hover:bg-sky-500/20 text-sky-400 border border-white/10 hover:border-sky-500/40 text-[10px] font-mono font-bold transition flex items-center gap-1" title="Быстрый конвертер валют">
+              <i data-lucide="arrow-left-right" class="w-3 h-3"></i>
+              <span>Конвертер</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Converter Popover -->
+        <div id="converterPopover" class="hidden absolute left-0 top-14 z-50 w-72 glass-panel p-3.5 rounded-2xl border border-sky-500/40 shadow-2xl space-y-2.5">
+          <div class="flex items-center justify-between text-xs font-bold text-sky-300">
+            <span class="flex items-center gap-1.5"><i data-lucide="calculator" class="w-3.5 h-3.5"></i> Быстрый обмен</span>
+            <button type="button" id="closeConverterBtn" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5">Сумма в $ USD:</label>
+              <input type="number" id="convUsdInput" placeholder="100" class="glass-input w-full p-2 rounded-xl text-xs font-mono font-bold text-white">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5">Сумма в ₴ UAH:</label>
+              <input type="number" id="convUahInput" placeholder="4150" class="glass-input w-full p-2 rounded-xl text-xs font-mono font-bold text-sky-300">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls: Music, Privacy, Language, Currency, Backup -->
+      <div class="flex flex-wrap items-center gap-2">
+        
+        <!-- Retro Roulette Player -->
+        <div class="flex items-center gap-2 p-1.5 px-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 shadow-md">
+          <button type="button" id="toggleMusicBtn" class="flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-white transition">
+            <i data-lucide="play" id="musicPlayIcon" class="w-4 h-4 text-amber-400"></i>
+            <span id="musicTrackName" class="text-[11px] font-mono max-w-[100px] sm:max-w-[130px] truncate">Рулетка 90s</span>
+          </button>
+          
+          <div id="musicVisualizer" class="flex items-end gap-0.5 h-4 eq-paused">
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+            <div class="eq-bar"></div>
+          </div>
+
+          <input type="range" id="musicVolume" min="0" max="1" step="0.05" value="0.5" class="w-12 sm:w-14 h-1 accent-amber-400 bg-white/20 rounded cursor-pointer" title="Громкость">
+          
+          <!-- Upload audio from PC -->
+          <label class="cursor-pointer flex items-center gap-1 text-[10px] font-bold text-amber-300 hover:text-white px-2 py-1 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 transition active:scale-95 shadow-sm" title="Загрузить свой трек (MP3, WAV, OGG)">
+            <i data-lucide="upload" class="w-3 h-3"></i>
+            <span class="hidden sm:inline">Трек</span>
+            <input type="file" id="musicFileInput" accept="audio/*" class="hidden">
+          </label>
+        </div>
+
+        <!-- Privacy Mode Button (Stealth / Blur) -->
+        <button type="button" id="privacyModeBtn" class="p-2 rounded-2xl glass-panel text-slate-300 hover:text-sky-300 hover:border-sky-500/50 transition active:scale-95 flex items-center gap-1.5 px-3 text-xs font-bold" title="Скрыть балансы (Alt + H)">
+          <i data-lucide="eye" id="privacyEyeIcon" class="w-4 h-4 text-sky-400"></i>
+          <span class="hidden md:inline">Инкогнито</span>
+        </button>
+
+        <!-- Language Switcher -->
+        <div class="flex items-center bg-slate-900 border border-white/10 rounded-2xl p-1">
+          <button type="button" id="langRuBtn" class="px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm">RU</button>
+          <button type="button" id="langUaBtn" class="px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition">UA</button>
+        </div>
+
+        <!-- Currency View Toggle -->
+        <div class="flex items-center bg-slate-900 border border-white/10 rounded-2xl p-1">
+          <button type="button" id="curUahBtn" class="px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition">₴ UAH</button>
+          <button type="button" id="curUsdBtn" class="px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm">$ USD</button>
+        </div>
+
+        <!-- JSON Data Modal Button -->
+        <button type="button" id="openBackupModalBtn" class="p-2.5 rounded-2xl glass-panel text-slate-300 hover:text-white hover:border-sky-500/50 transition active:scale-95 shadow" title="Резервное копирование и JSON">
+          <i data-lucide="database" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 max-w-[1800px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-5 space-y-5">
+    
+    <!-- MOTIVATION TICKER BAR (ROTATES EVERY 2 MINUTES) -->
+    <div class="glass-panel px-4 py-3 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 via-purple-500/5 to-sky-500/10 relative overflow-hidden">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="p-2 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shrink-0">
+            <i data-lucide="flame" class="w-4 h-4 text-amber-400"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-mono uppercase tracking-widest text-indigo-300 font-bold">MINDSET & FOCUS</span>
+              <span id="quoteTimerText" class="text-[10px] font-mono text-slate-500">02:00</span>
+            </div>
+            <p id="motivationalQuoteText" class="text-xs sm:text-sm font-bold text-slate-100 quote-fade truncate sm:whitespace-normal">
+              «Дисциплина на дистанции всегда обыгрывает азарт. Торгуй систему, а не эмоции.»
+            </p>
+          </div>
+        </div>
+        <button type="button" id="nextQuoteBtn" class="shrink-0 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition active:scale-95 flex items-center gap-1 text-xs font-bold" title="Следующая фраза">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline text-[11px]">Ещё</span>
+        </button>
+      </div>
+      <!-- 2-minute countdown thin bar -->
+      <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5">
+        <div id="quoteProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-purple-400 to-sky-400 transition-all duration-1000" style="width: 100%;"></div>
+      </div>
+    </div>
+
+    <!-- Top Summary Banner -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- Total Net Worth Card -->
+      <div class="lg:col-span-5 glass-panel p-5 rounded-3xl border border-sky-500/30 bg-gradient-to-r from-sky-500/10 via-purple-500/10 to-transparent relative overflow-hidden">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5" id="lblNetWorth">
+              <i data-lucide="wallet-cards" class="w-4 h-4"></i>
+              Общий Капитал (Net Worth)
+            </span>
+            <div class="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-mono mt-1 text-white tracking-tight sensitive-val" id="totalNetWorthVal">
+              $0.00
+            </div>
+            <div class="flex flex-wrap items-center gap-3 mt-1.5">
+              <span class="text-xs font-mono text-slate-400 sensitive-val" id="totalNetWorthSecondaryVal">≈ 0.00 ₴</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 sensitive-val" id="netWorthSavingsBadge">
+                В копилках: $0
+              </span>
+            </div>
+          </div>
+          <div class="p-3 rounded-2xl bg-sky-500/20 text-sky-400 border border-sky-500/30">
+            <i data-lucide="sparkles" class="w-6 h-6"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Capital Goal Widget -->
+      <div class="lg:col-span-7 glass-panel p-5 rounded-3xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-transparent flex flex-col justify-between">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+            <span class="text-xs font-bold uppercase tracking-wider text-emerald-300" id="goalTitleDisplay">Глобальная цель: $10,000</span>
+          </div>
+          <button type="button" id="editGoalBtn" class="text-xs text-slate-400 hover:text-emerald-300 flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-xl border border-white/10">
+            <i data-lucide="settings-2" class="w-3.5 h-3.5"></i>
+            <span>Настроить</span>
+          </button>
+        </div>
+
+        <div class="w-full bg-slate-800/80 rounded-full h-3.5 overflow-hidden p-0.5 border border-white/10 my-1">
+          <div id="goalProgressBar" class="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-sky-400 rounded-full transition-all duration-500" style="width: 0%;"></div>
+        </div>
+
+        <div class="flex items-center justify-between mt-2 text-xs font-mono">
+          <span class="text-slate-400 sensitive-val" id="goalCurrentDisplay">$0 / $10,000</span>
+          <span class="font-bold text-emerald-400" id="goalPercentDisplay">0.0%</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 4 MAIN COLUMNS WORKSPACE -->
+    <div id="columnsContainer" class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5 items-start">
+      
+      <!-- ============================================== -->
+      <!-- COLUMN 1: КАРТА (₴ UAH) -->
+      <!-- ============================================== -->
+      <section id="columnCard" class="glass-panel rounded-3xl border border-sky-500/20 p-5 space-y-4 transition-all">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-sky-500/20 text-sky-400 flex items-center justify-center border border-sky-500/30">
+              <i data-lucide="credit-card" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-black tracking-wide text-white uppercase" id="colTitleCard">КАРТА</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Гривневые счета и карты</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Баланс карт</span>
+            <div class="text-base font-black font-mono text-sky-400 sensitive-val" id="cardTotalBalanceVal">0.00 ₴</div>
+          </div>
+        </div>
+
+        <!-- Bank Accounts Chips -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Мои Счета:</span>
+            <button type="button" id="addAccountBtn" class="text-sky-400 hover:text-sky-300 font-bold flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Счет</span>
+            </button>
+          </div>
+          <div id="accountsList" class="flex flex-wrap gap-1.5">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- New Card Transaction Form -->
+        <form id="cardTxForm" class="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300">Новая операция (₴):</span>
+            
+            <div class="flex items-center p-0.5 rounded-xl bg-slate-800 border border-white/10 text-xs">
+              <button type="button" id="cardTypeExpenseBtn" class="px-2 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">Расход (-)</button>
+              <button type="button" id="cardTypeIncomeBtn" class="px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400">Доход (+)</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Сумма (₴):</label>
+              <input type="number" id="cardTxAmount" step="1" required placeholder="0.00" class="glass-input w-full p-2 rounded-xl text-sm font-bold font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Счет:</label>
+              <select id="cardTxAccountSelect" class="glass-input w-full p-2 rounded-xl text-xs font-bold text-slate-200">
+                <!-- Injected via JS -->
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Категория:</label>
+              <select id="cardTxCategory" class="glass-input w-full p-2 rounded-xl text-xs text-slate-200">
+                <option value="Продукты">🛒 Продукты</option>
+                <option value="Кафе & Доставка">🍔 Кафе & Доставка</option>
+                <option value="Транспорт & Поездки">🚕 Транспорт & Поездки</option>
+                <option value="Жилье & Коммуналка">🏠 Жилье & Коммуналка</option>
+                <option value="Покупки & Девайсы">📦 Покупки & Девайсы</option>
+                <option value="Отложено в копилку">🐷 В копилку</option>
+                <option value="Зарплата / Работа">💼 Зарплата / Работа</option>
+                <option value="P2P Обмен">🔄 P2P Обмен</option>
+                <option value="Другое">✨ Другое</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Заметка:</label>
+              <input type="text" id="cardTxNote" placeholder="Описание..." class="glass-input w-full p-2 rounded-xl text-xs text-white">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-sky-600/20 active:scale-95 transition">
+            Добавить операцию
+          </button>
+        </form>
+
+        <!-- Card Transaction History -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>История транзакций (₴):</span>
+            <span id="cardTxCount" class="font-mono text-[10px]">0 зап.</span>
+          </div>
+          <div id="cardTxList" class="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================== -->
+      <!-- COLUMN 2: КРИПТА ($ USD - Фьючерсы & Транзакции) -->
+      <!-- ============================================== -->
+      <section id="columnCrypto" class="glass-panel rounded-3xl border border-purple-500/20 p-5 space-y-4 transition-all">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center border border-purple-500/30">
+              <i data-lucide="candlestick-chart" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-black tracking-wide text-white uppercase" id="colTitleCrypto">КРИПТА</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Фьючерсы & Баланс</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="flex items-center justify-end gap-1.5">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Депозит</span>
+              <button type="button" id="editCryptoDepositBtn" class="text-slate-400 hover:text-purple-300 p-0.5 transition" title="Изменить депозит вручную">
+                <i data-lucide="pencil" class="w-3 h-3"></i>
+              </button>
+            </div>
+            <div class="text-base font-black font-mono text-purple-400 sensitive-val" id="cryptoTotalBalanceVal">$0.00</div>
+          </div>
+        </div>
+
+        <!-- Crypto Tabs -->
+        <div class="flex items-center p-1 rounded-2xl bg-slate-900/90 border border-white/10 gap-1 text-xs">
+          <button type="button" id="tabFuturesTradesBtn" class="flex-1 py-1.5 rounded-xl font-bold bg-purple-500 text-white shadow-sm transition">Сделки</button>
+          <button type="button" id="tabCryptoTxBtn" class="flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-white transition">Кошелек ($)</button>
+          <button type="button" id="tabProAnalysisBtn" class="flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-amber-400 transition flex items-center justify-center gap-1">
+            <i data-lucide="flame" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Анализ</span>
+          </button>
+        </div>
+
+        <!-- SECTION A: FUTURES FORM & LIST -->
+        <div id="cryptoFuturesSection" class="space-y-3.5">
+          
+          <!-- Anti-Tilt Pre-Trade Discipline Checklist (Bonus Feature) -->
+          <div class="p-2.5 rounded-2xl bg-slate-900/90 border border-purple-500/20 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-purple-400"></i>
+                Анти-Тильт Чек-лист
+              </span>
+              <span id="antiTiltStatusBadge" class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400">0/3</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 text-[10px]">
+              <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer select-none">
+                <input type="checkbox" class="tilt-check accent-emerald-500 rounded">
+                <span class="text-slate-300 truncate">Стоп стоит</span>
+              </label>
+              <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer select-none">
+                <input type="checkbox" class="tilt-check accent-emerald-500 rounded">
+                <span class="text-slate-300 truncate">Риск ≤ 5%</span>
+              </label>
+              <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 cursor-pointer select-none">
+                <input type="checkbox" class="tilt-check accent-emerald-500 rounded">
+                <span class="text-slate-300 truncate">Без тильта</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Futures Trade Form -->
+          <form id="futuresTradeForm" class="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1">
+                <span class="text-xs font-bold text-slate-300">Сделка:</span>
+                <button type="button" id="quickOpenCalcBtn" class="text-[10px] font-bold text-purple-300 hover:text-white px-2 py-0.5 rounded-lg bg-purple-500/20 border border-purple-500/30 ml-1">
+                  Калькулятор ➔
+                </button>
+              </div>
+
+              <!-- Long / Short Switch -->
+              <div class="flex items-center p-0.5 rounded-xl bg-slate-800 border border-white/10 text-xs">
+                <button type="button" id="tradeDirLongBtn" class="px-2 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">LONG</button>
+                <button type="button" id="tradeDirShortBtn" class="px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400">SHORT</button>
+              </div>
+            </div>
+
+            <!-- Coin & Leverage -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Монета / Пара:</label>
+                <input type="text" id="tradeCoinInput" value="BTC/USDT" placeholder="SOL/USDT..." required class="glass-input w-full p-2 rounded-xl text-xs font-bold text-white uppercase">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Плечо (Leverage):</label>
+                <div class="flex items-center gap-1">
+                  <input type="number" id="tradeLeverageInput" min="1" max="125" value="20" required class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-center text-purple-300">
+                  <span class="text-xs font-bold text-slate-400 font-mono">x</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Margin & Fee -->
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Маржа ($):</label>
+                <input type="number" id="tradeMarginInput" step="0.1" required placeholder="50.00" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Комиссия ($):</label>
+                <input type="number" id="tradeFeeInput" step="0.01" value="0.00" placeholder="0.50" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-amber-300">
+              </div>
+            </div>
+
+            <!-- Profit/Loss toggle & Net PnL -->
+            <div class="p-2.5 rounded-xl bg-slate-950/60 border border-white/5 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="text-[11px] text-slate-400 font-bold">Итог сделки:</span>
+                <div class="flex items-center gap-1">
+                  <button type="button" id="tradeResultWinBtn" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">+ Профит</button>
+                  <button type="button" id="tradeResultLossBtn" class="px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-rose-400">- Убыток</button>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <input type="number" id="tradeGrossPnlInput" step="0.1" required placeholder="Результат $" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-white">
+                <div class="text-right whitespace-nowrap">
+                  <span class="text-[9px] uppercase text-slate-400 block">Чистый PnL:</span>
+                  <span id="tradePreviewNetPnl" class="text-xs font-bold font-mono text-emerald-400">+$0.00</span>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs shadow-lg shadow-purple-600/20 active:scale-95 transition">
+              Сохранить сделку
+            </button>
+          </form>
+
+          <!-- PnL Equity Curve -->
+          <div class="p-3 rounded-2xl bg-slate-900/60 border border-white/5">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="line-chart" class="w-3.5 h-3.5 text-purple-400"></i>
+                Кривая PnL ($)
+              </span>
+              <span id="pnlWinrateBadge" class="text-[10px] font-mono font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">WR: 0%</span>
+            </div>
+            <div class="h-24 w-full">
+              <canvas id="pnlChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <!-- Trades List -->
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span>История сделок:</span>
+              <span id="futuresTradeCount" class="font-mono text-[10px]">0 сделок</span>
+            </div>
+            <div id="futuresTradesList" class="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+
+        </div>
+
+        <!-- SECTION B: CRYPTO TRANSACTIONS (Wallet In/Out) -->
+        <div id="cryptoTxSection" class="space-y-4 hidden">
+          <form id="cryptoWalletTxForm" class="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-300">Движение ($):</span>
+              <div class="flex items-center p-0.5 rounded-xl bg-slate-800 border border-white/10 text-xs">
+                <button type="button" id="cryptoTxTypeOutBtn" class="px-2.5 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">Вывод (-)</button>
+                <button type="button" id="cryptoTxTypeInBtn" class="px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400">Ввод (+)</button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Сумма ($):</label>
+                <input type="number" id="cryptoWalletAmount" step="1" required placeholder="0.00" class="glass-input w-full p-2 rounded-xl text-sm font-bold font-mono text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 mb-1">Актив / Биржа:</label>
+                <input type="text" id="cryptoWalletAsset" value="USDT (Bybit)" required class="glass-input w-full p-2 rounded-xl text-xs font-bold text-white">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Категория:</label>
+              <select id="cryptoWalletCategory" class="glass-input w-full p-2 rounded-xl text-xs text-slate-200">
+                <option value="P2P Вывод на карту">🔄 P2P Вывод на карту</option>
+                <option value="P2P Пополнение">💳 P2P Пополнение</option>
+                <option value="Отложено в Сейф/Копилку">🐷 В Копилку</option>
+                <option value="Перевод между биржами">⚡ Перевод между биржами</option>
+                <option value="Стейкинг / Earn">📈 Стейкинг / Earn</option>
+                <option value="Покупка Спот">🪙 Покупка Спот</option>
+                <option value="Другое">✨ Другое</option>
+              </select>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-sky-600 hover:from-purple-500 hover:to-sky-500 text-white font-bold text-xs shadow-lg shadow-purple-600/20 active:scale-95 transition">
+              Добавить операцию
+            </button>
+          </form>
+
+          <div id="cryptoWalletTxList" class="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+        <!-- SECTION C: PRO ANALYTICS -->
+        <div id="cryptoProSection" class="space-y-4 hidden">
+          <div class="grid grid-cols-2 gap-2 text-center">
+            <div class="p-3 rounded-2xl bg-slate-900/80 border border-white/5">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Profit Factor</span>
+              <div id="proProfitFactorVal" class="text-lg font-black font-mono text-emerald-400 mt-0.5">0.00</div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-900/80 border border-white/5">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Комиссий отдано</span>
+              <div id="proTotalFeesVal" class="text-lg font-black font-mono text-amber-400 mt-0.5">$0.00</div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-900/80 border border-white/5">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Avg Win</span>
+              <div id="proAvgWinVal" class="text-sm font-bold font-mono text-emerald-400 mt-0.5">+$0.00</div>
+            </div>
+            <div class="p-3 rounded-2xl bg-slate-900/80 border border-white/5">
+              <span class="text-[10px] uppercase font-bold text-slate-400">Avg Loss</span>
+              <div id="proAvgLossVal" class="text-sm font-bold font-mono text-rose-400 mt-0.5">-$0.00</div>
+            </div>
+          </div>
+
+          <!-- Coin Leaderboard -->
+          <div class="p-3 rounded-2xl bg-slate-900/60 border border-white/5 space-y-2">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="award" class="w-3.5 h-3.5 text-amber-400"></i>
+              Топ монет по доходности
+            </span>
+            <div id="proCoinLeaderboard" class="space-y-1.5 text-xs font-mono">
+              <!-- Injected by JS -->
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================== -->
+      <!-- COLUMN 3: ОТЛОЖЕННЫЕ (КОПИЛКИ НА ЦЕЛИ ₴ / $) -->
+      <!-- ============================================== -->
+      <section id="columnSavings" class="glass-panel rounded-3xl border border-emerald-500/25 p-5 space-y-4 transition-all">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+              <i data-lucide="piggy-bank" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-black tracking-wide text-white uppercase" id="colTitleSavings">ОТЛОЖЕННЫЕ</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Цели, копилки & резерв</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Всего отложено</span>
+            <div class="text-base font-black font-mono text-emerald-400 sensitive-val" id="savingsTotalUsdVal">$0.00</div>
+          </div>
+        </div>
+
+        <!-- Option: Include savings in Net Worth -->
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs">
+          <span class="text-[11px] text-emerald-200 font-medium flex items-center gap-1.5">
+            <i data-lucide="shield" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Учитывать в Общем Капитале
+          </span>
+          <input type="checkbox" id="includeSavingsInNwCheckbox" checked class="accent-emerald-500 w-4 h-4 rounded cursor-pointer">
+        </div>
+
+        <!-- Create New Savings Goal Form -->
+        <form id="savingsGoalForm" class="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Новая финансовая цель:
+            </span>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block text-[10px] text-slate-400 mb-1">Название цели:</label>
+              <input type="text" id="savTitleInput" required placeholder="Подушка, Отпуск, Авто..." class="glass-input w-full p-2 rounded-xl text-xs font-bold text-white">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Валюта:</label>
+              <select id="savCurrencySelect" class="glass-input w-full p-2 rounded-xl text-xs font-bold text-emerald-300">
+                <option value="USD">$ USD</option>
+                <option value="UAH">₴ UAH</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Нужно собрать:</label>
+              <input type="number" id="savTargetInput" step="1" required placeholder="1000" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Уже отложено:</label>
+              <input type="number" id="savInitialInput" step="1" value="0" placeholder="0" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-emerald-300">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/20 active:scale-95 transition">
+            Создать копилку
+          </button>
+        </form>
+
+        <!-- Active Savings Goals List -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Мои копилки:</span>
+            <span id="savingsGoalsCount" class="font-mono text-[10px]">0 целей</span>
+          </div>
+          <div id="savingsGoalsList" class="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ============================================== -->
+      <!-- COLUMN 4: ДОЛГИ (₴ / $) -->
+      <!-- ============================================== -->
+      <section id="columnDebt" class="glass-panel rounded-3xl border border-amber-500/20 p-5 space-y-4 transition-all">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-white/10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center border border-amber-500/30">
+              <i data-lucide="hand-coins" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-black tracking-wide text-white uppercase" id="colTitleDebt">ДОЛГИ</h2>
+              <p class="text-[11px] text-slate-400 font-mono">Учет займов (₴ / $)</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-[10px] uppercase font-bold text-slate-400">Чистое сальдо</span>
+            <div class="text-base font-black font-mono text-amber-400 sensitive-val" id="debtNetBalanceVal">+0.00 $</div>
+          </div>
+        </div>
+
+        <!-- Debt Stats (Owed to me vs I owe) -->
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <span class="text-[10px] text-emerald-400 font-bold block">Мне должны:</span>
+            <div class="font-mono font-black text-emerald-300 sensitive-val" id="debtOwedToMeSummary">$0 / 0₴</div>
+          </div>
+          <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+            <span class="text-[10px] text-rose-400 font-bold block">Я должен:</span>
+            <div class="font-mono font-black text-rose-300 sensitive-val" id="debtIOweSummary">$0 / 0₴</div>
+          </div>
+        </div>
+
+        <!-- New Debt Form -->
+        <form id="debtForm" class="p-3.5 rounded-2xl bg-slate-900/60 border border-white/5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-300">Новый долг:</span>
+            
+            <!-- Type Switch: Owed to me (+) vs I owe (-) -->
+            <div class="flex items-center p-0.5 rounded-xl bg-slate-800 border border-white/10 text-xs">
+              <button type="button" id="debtTypeToMeBtn" class="px-2 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Мне (+)</button>
+              <button type="button" id="debtTypeIOweBtn" class="px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400">Я (-)</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block text-[10px] text-slate-400 mb-1">Сумма:</label>
+              <input type="number" id="debtAmountInput" step="1" required placeholder="1000" class="glass-input w-full p-2 rounded-xl text-sm font-bold font-mono text-white">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Валюта:</label>
+              <select id="debtCurrencySelect" class="glass-input w-full p-2 rounded-xl text-xs font-bold text-amber-300">
+                <option value="USD">$ USD</option>
+                <option value="UAH">₴ UAH</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Контакт / Имя:</label>
+              <input type="text" id="debtPersonInput" required placeholder="Имя человека..." class="glass-input w-full p-2 rounded-xl text-xs text-white">
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 mb-1">Заметка:</label>
+              <input type="text" id="debtNoteInput" placeholder="До пятницы..." class="glass-input w-full p-2 rounded-xl text-xs text-white">
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs shadow-lg shadow-amber-600/20 active:scale-95 transition">
+            Зафиксировать долг
+          </button>
+        </form>
+
+        <!-- Debt List -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Список долгов:</span>
+            <span id="debtsCount" class="font-mono text-[10px]">0 долгов</span>
+          </div>
+          <div id="debtsList" class="space-y-2 max-h-[340px] overflow-y-auto pr-1">
+            <!-- Injected by JS -->
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODAL: FUND OR WITHDRAW FROM SAVINGS GOAL      -->
+  <!-- ============================================== -->
+  <div id="modalSavingsAction" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-emerald-500/40 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2" id="savModalTitle">
+          <i data-lucide="piggy-bank" class="w-4 h-4 text-emerald-400"></i>
+          <span>Пополнить копилку</span>
+        </h3>
+        <button type="button" id="closeSavModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-white/5 text-xs flex items-center justify-between">
+          <span class="text-slate-400" id="savModalGoalName">Цель</span>
+          <span class="font-mono font-bold text-emerald-400" id="savModalCurrentBal">$0 / $1000</span>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1" id="savModalInputLabel">Сумма операции:</label>
+          <input type="number" id="savModalAmountInput" step="1" required placeholder="100" class="glass-input w-full p-2.5 rounded-xl text-base font-black font-mono text-white">
+        </div>
+      </div>
+
+      <button type="button" id="confirmSavActionBtn" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
+        Подтвердить
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: BIG PRO RISK & LEVERAGE CALCULATOR -->
+  <!-- ============================================== -->
+  <div id="modalBigCalc" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-2xl rounded-3xl border border-purple-500/40 p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-white/10">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-purple-500/20 text-purple-300 flex items-center justify-center border border-purple-500/40">
+            <i data-lucide="calculator" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-white flex items-center gap-2">
+              PRO КАЛЬКУЛЯТОР РИСКА И ПЛЕЧА
+              <span class="text-[9px] bg-purple-500/30 text-purple-300 px-2 py-0.5 rounded-full font-mono border border-purple-500/40">FUTURES</span>
+            </h3>
+            <p class="text-xs text-slate-400 font-mono">Расчет маржи, допустимого риска и ликвидации</p>
+          </div>
+        </div>
+        <button type="button" id="closeBigCalcModalBtn" class="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+      <!-- Deposit & Direction -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-900/60 border border-white/5">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">Депозит фьючерсов ($):</label>
+          <input type="number" id="calcDepositInput" step="10" value="1000" class="glass-input w-full p-2.5 rounded-xl text-base font-extrabold font-mono text-purple-300">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1">Направление:</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="calcDirLongBtn" class="py-2.5 rounded-xl font-bold text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">LONG (Покупка)</button>
+            <button type="button" id="calcDirShortBtn" class="py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-rose-400 border border-transparent">SHORT (Продажа)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk % Selector -->
+      <div class="space-y-2">
+        <label class="block text-xs font-bold text-slate-300">Риск на сделку (% от депозита):</label>
+        <div class="grid grid-cols-6 gap-2">
+          <button type="button" class="calc-risk-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10 hover:border-purple-400" data-risk="1">1%</button>
+          <button type="button" class="calc-risk-pill py-2 rounded-xl text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-500/50" data-risk="2">2%</button>
+          <button type="button" class="calc-risk-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10 hover:border-purple-400" data-risk="5">5%</button>
+          <button type="button" class="calc-risk-pill py-2 rounded-xl text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:border-amber-400" data-risk="10">10%</button>
+          <button type="button" class="calc-risk-pill py-2 rounded-xl text-xs font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:border-rose-400" data-risk="20">20% 🔥</button>
+          <input type="number" id="calcRiskCustomInput" min="0.1" max="100" placeholder="Свой %" class="glass-input p-2 rounded-xl text-xs font-bold font-mono text-center text-white">
+        </div>
+      </div>
+
+      <!-- Leverage Selection -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs">
+          <label class="font-bold text-slate-300">Кредитное плечо (Leverage):</label>
+          <span id="calcLeverageDisplay" class="font-mono font-bold text-purple-400">20x</span>
+        </div>
+        <div class="grid grid-cols-5 gap-2">
+          <button type="button" class="calc-lev-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10" data-lev="5">5x</button>
+          <button type="button" class="calc-lev-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10" data-lev="10">10x</button>
+          <button type="button" class="calc-lev-pill py-2 rounded-xl text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-500/50" data-lev="20">20x</button>
+          <button type="button" class="calc-lev-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10" data-lev="50">50x</button>
+          <button type="button" class="calc-lev-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10" data-lev="100">100x</button>
+        </div>
+        <input type="range" id="calcLeverageSlider" min="1" max="125" value="20" class="w-full accent-purple-500 cursor-pointer">
+      </div>
+
+      <!-- Prices: Entry, Stop-Loss, Take-Profit -->
+      <div class="grid grid-cols-3 gap-2">
+        <div>
+          <label class="block text-[11px] text-slate-400 mb-1">Вход ($):</label>
+          <input type="number" id="calcEntryPrice" step="0.0001" value="65000" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-white">
+        </div>
+        <div>
+          <label class="block text-[11px] text-rose-400 mb-1">Стоп-лосс ($):</label>
+          <input type="number" id="calcStopPrice" step="0.0001" value="64000" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-rose-300 border-rose-500/40">
+        </div>
+        <div>
+          <label class="block text-[11px] text-emerald-400 mb-1">Тейк-профит ($):</label>
+          <input type="number" id="calcTakePrice" step="0.0001" value="67000" class="glass-input w-full p-2 rounded-xl text-xs font-bold font-mono text-emerald-300 border-emerald-500/40">
+        </div>
+      </div>
+
+      <!-- RESULTS DASHBOARD -->
+      <div class="p-4 rounded-2xl bg-gradient-to-tr from-purple-900/40 via-indigo-950/40 to-slate-900 border border-purple-500/30 space-y-3">
+        <div class="text-xs font-bold uppercase tracking-wider text-purple-300">Расчетные параметры позиции:</div>
+        
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+            <span class="text-[9px] uppercase text-slate-400 block">Риск потери</span>
+            <span id="calcResultRiskUsd" class="text-sm font-black font-mono text-rose-400">-$20.00</span>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+            <span class="text-[9px] uppercase text-slate-400 block">Необходимая маржа</span>
+            <span id="calcResultMarginUsd" class="text-sm font-black font-mono text-purple-300">$65.00</span>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+            <span class="text-[9px] uppercase text-slate-400 block">Объем сделки</span>
+            <span id="calcResultSizeUsd" class="text-sm font-black font-mono text-white">$1,300</span>
+          </div>
+          <div class="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+            <span class="text-[9px] uppercase text-slate-400 block">Ликвидация (прим.)</span>
+            <span id="calcResultLiqPrice" class="text-sm font-black font-mono text-amber-400">~61,750</span>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs font-mono pt-1 text-slate-300">
+          <span>Потенциальная прибыль (TP): <strong id="calcResultRewardUsd" class="text-emerald-400">+$40.00</strong></span>
+          <span>Risk / Reward: <strong id="calcResultRrRatio" class="text-sky-400">1 : 2.0</strong></span>
+        </div>
+      </div>
+
+      <!-- Apply to trade form button -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" id="closeBigCalcBottomBtn" class="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-bold">Закрыть</button>
+        <button type="button" id="applyCalcToTradeBtn" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-black shadow-lg shadow-purple-600/30 flex items-center gap-1.5 active:scale-95 transition">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Перенести маржу в сделку</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL: BACKUP JSON (TEXTAREA IMPORT & EXPORT) -->
+  <!-- ============================================== -->
+  <div id="modalBackup" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-lg rounded-3xl border border-white/10 p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="database" class="w-5 h-5 text-sky-400"></i>
+          <span>Резервная копия данных (JSON)</span>
+        </h3>
+        <button type="button" id="closeBackupModalBtn" class="text-slate-400 hover:text-white p-1 rounded-lg">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-400">Скопируйте JSON-текст для сохранения или вставьте ранее сохраненный JSON для моментального восстановления:</p>
+
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-[11px] text-slate-400">
+          <span>JSON текст базы данных:</span>
+          <span id="jsonBackupStatusMsg" class="font-mono text-emerald-400 hidden">✓ Скопировано</span>
+        </div>
+        <textarea id="jsonBackupTextarea" rows="8" placeholder="Вставьте сюда JSON текст для импорта..." class="glass-input w-full p-3 rounded-2xl text-slate-200 font-mono text-[11px] leading-relaxed resize-y focus:border-sky-400 select-all"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" id="copyJsonTextBtn" class="py-2.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95">
+          <i data-lucide="copy" class="w-4 h-4"></i>
+          <span>Скопировать JSON</span>
+        </button>
+        <button type="button" id="applyJsonTextImportBtn" class="py-2.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5 active:scale-95">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Применить JSON</span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between pt-2 border-t border-white/5">
+        <button type="button" id="exportJsonFileBtn" class="text-xs text-sky-400 hover:text-sky-300 flex items-center gap-1">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>Скачать .json файл</span>
+        </button>
+        <button type="button" id="resetDataBtn" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Сброс данных</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CAPITAL GOAL SETTINGS -->
+  <div id="modalGoal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm hidden p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-emerald-500/30 p-5 space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="target" class="w-4 h-4 text-emerald-400"></i>
+          <span>Глобальная цель капитала</span>
+        </h3>
+        <button type="button" id="closeGoalModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Название цели:</label>
+          <input type="text" id="goalTitleInput" placeholder="Например: Первые $10,000" class="glass-input w-full p-2.5 rounded-xl text-xs font-bold text-white">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Целевая сумма ($):</label>
+          <input type="number" id="goalAmountInput" step="100" class="glass-input w-full p-2.5 rounded-xl text-sm font-black font-mono text-emerald-300">
+        </div>
+      </div>
+
+      <button type="button" id="saveGoalBtn" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition">
+        Сохранить цель
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: EDIT CRYPTO DEPOSIT -->
+  <div id="modalEditDeposit" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-purple-500/40 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="coins" class="w-4 h-4 text-purple-400"></i>
+          <span>Базовый депозит крипты</span>
+        </h3>
+        <button type="button" id="closeDepositModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <label class="block text-xs text-slate-400">Текущий депозит ($):</label>
+        <input type="number" id="cryptoDepositInput" step="10" required class="glass-input w-full p-2.5 rounded-xl text-base font-black font-mono text-purple-300">
+        <p class="text-[11px] text-slate-500">PnL фьючерсов и движения кошелька будут автоматически прибавляться к этой сумме.</p>
+      </div>
+
+      <button type="button" id="saveCryptoDepositBtn" class="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-lg shadow-purple-600/30 active:scale-95 transition">
+        Сохранить депозит
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD NEW BANK ACCOUNT -->
+  <div id="modalAddAccount" class="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md hidden p-4">
+    <div class="glass-panel w-full max-w-sm rounded-3xl border border-sky-500/40 p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i data-lucide="credit-card" class="w-4 h-4 text-sky-400"></i>
+          <span>Новый счет / карта</span>
+        </h3>
+        <button type="button" id="closeAddAccountModalBtn" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Название счета/карты:</label>
+          <input type="text" id="newAccountNameInput" placeholder="Например: Monobank, Приват, Нал..." class="glass-input w-full p-2.5 rounded-xl text-xs font-bold text-white">
+        </div>
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Начальный баланс (₴):</label>
+          <input type="number" id="newAccountBalanceInput" step="1" value="0" class="glass-input w-full p-2.5 rounded-xl text-sm font-black font-mono text-sky-300">
+        </div>
+      </div>
+
+      <button type="button" id="saveNewAccountBtn" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/30 active:scale-95 transition">
+        Создать карту
+      </button>
+    </div>
+  </div>
+
+  <!-- SCRIPT ENGINE -->
+  <script>
+    /* Motivational Quotes (Rotates every 2 minutes / 120 sec) */
+    const MOTIVATIONAL_QUOTES = [
+      "«Дисциплина на дистанции всегда обыгрывает азарт. Торгуй систему, а не эмоции.»",
+      "«Каждая отложенная сотня долларов — это твой личный солдат, который работает на твою свободу.»",
+      "«Лучшая сделка — та, в которую ты НЕ вошел на тильте. Сохранить депозит важнее, чем угадать хай.»",
+      "«Большие капиталы строятся в тишине: холодный расчет, жесткий риск-менеджмент и фокус на цели.»",
+      "«Рынок никуда не убежит. Твоя задача — забирать свое по плану и вовремя закрывать терминал.»",
+      "«Не считай чужие иксы — считай свой PnL и процент выполнения своих целей.»",
+      "«Финансовая подушка дает главное преимущество в жизни и трейдинге — отсутствие страха.»",
+      "«Богатство — это не то, сколько ты заработал за день, а то, сколько ты сумел сохранить и приумножить.»",
+      "«Маленькие ежедневные плюсы складываются в огромный капитал за год. Держи темп!»",
+      "«Стоп-лосс — это страховка твоего будущего. Никогда не торгуй без плана выхода.»"
+    ];
+
+    /* Default Application State */
+    const DEFAULT_DATA = {
+      lang: 'ru',
+      displayCurrency: 'USD',
+      usdRate: 41.5,
+      activeView: 'all',
+      privacyMode: false,
+      includeSavingsInNetWorth: true,
+      goal: {
+        title: 'Первые $10,000',
+        targetAmount: 10000
+      },
+      cardAccounts: [
+        { id: 'acc_1', name: 'Monobank', balance: 25400, color: 'sky' },
+        { id: 'acc_2', name: 'Приват24', balance: 14800, color: 'emerald' },
+        { id: 'acc_3', name: 'Наличные', balance: 5000, color: 'amber' }
+      ],
+      cardTransactions: [
+        { id: 'ctx_1', accountId: 'acc_1', type: 'expense', amount: 850, category: 'Продукты', note: 'Супермаркет', date: '2026-10-18' },
+        { id: 'ctx_2', accountId: 'acc_2', type: 'income', amount: 32000, category: 'Зарплата / Работа', note: 'Выплата', date: '2026-10-15' }
+      ],
+      cryptoDeposit: 2500,
+      futuresTrades: [
+        { id: 'ft_1', coin: 'BTC/USDT', dir: 'LONG', leverage: 20, margin: 100, fee: 1.2, grossPnl: 45, netPnl: 43.8, date: '2026-10-17' },
+        { id: 'ft_2', coin: 'SOL/USDT', dir: 'SHORT', leverage: 25, margin: 80, fee: 0.9, grossPnl: -25, netPnl: -25.9, date: '2026-10-18' }
+      ],
+      cryptoTransactions: [
+        { id: 'wtx_1', type: 'in', amount: 500, asset: 'USDT (Bybit)', category: 'P2P Пополнение', date: '2026-10-14' }
+      ],
+      savingsGoals: [
+        { id: 'sav_1', title: 'Финансовая подушка', targetAmount: 2000, currentAmount: 650, currency: 'USD' },
+        { id: 'sav_2', title: 'Поездка / Отдых', targetAmount: 40000, currentAmount: 15000, currency: 'UAH' }
+      ],
+      debts: [
+        { id: 'd_1', type: 'to_me', person: 'Александр К.', amount: 300, currency: 'USD', note: 'Обещал вернуть в пн', date: '2026-10-10' },
+        { id: 'd_2', type: 'i_owe', person: 'Сергей', amount: 2500, currency: 'UAH', note: 'За аренду', date: '2026-10-12' }
+      ]
+    };
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const stored = localStorage.getItem('onander_finance_state');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          return {
+            ...DEFAULT_DATA,
+            ...parsed,
+            savingsGoals: Array.isArray(parsed.savingsGoals) ? parsed.savingsGoals : DEFAULT_DATA.savingsGoals
+          };
+        }
+      } catch (e) {
+        console.error('State load error:', e);
+      }
+      return JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem('onander_finance_state', JSON.stringify(state));
+      } catch (e) {
+        console.error('State save error:', e);
+      }
+      renderAll();
+    }
+
+    const I18N = {
+      ru: {
+        colTitleCard: 'КАРТА',
+        colTitleCrypto: 'КРИПТА',
+        colTitleSavings: 'ОТЛОЖЕННЫЕ',
+        colTitleDebt: 'ДОЛГИ',
+        lblNetWorth: 'Общий Капитал (Net Worth)',
+      },
+      ua: {
+        colTitleCard: 'КАРТКА',
+        colTitleCrypto: 'КРИПТА',
+        colTitleSavings: 'ВІДКЛАДЕНІ',
+        colTitleDebt: 'БОРГИ',
+        lblNetWorth: 'Загальний Капітал (Net Worth)',
+      }
+    };
+
+    function applyLanguage(lang) {
+      state.lang = lang;
+      const dict = I18N[lang] || I18N.ru;
+      if (document.getElementById('colTitleCard')) document.getElementById('colTitleCard').innerText = dict.colTitleCard;
+      if (document.getElementById('colTitleCrypto')) document.getElementById('colTitleCrypto').innerText = dict.colTitleCrypto;
+      if (document.getElementById('colTitleSavings')) document.getElementById('colTitleSavings').innerText = dict.colTitleSavings;
+      if (document.getElementById('colTitleDebt')) document.getElementById('colTitleDebt').innerText = dict.colTitleDebt;
+      
+      const ruBtn = document.getElementById('langRuBtn');
+      const uaBtn = document.getElementById('langUaBtn');
+      if (ruBtn && uaBtn) {
+        if (lang === 'ua') {
+          uaBtn.className = 'px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm';
+          ruBtn.className = 'px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition';
+        } else {
+          ruBtn.className = 'px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm';
+          uaBtn.className = 'px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition';
+        }
+      }
+    }
+
+    function safeCreateIcons() {
+      if (window.lucide && typeof lucide.createIcons === 'function') {
+        lucide.createIcons();
+      }
+    }
+
+    /* ========================================== */
+    /* MOTIVATIONAL QUOTES ROTATOR (2 MINUTES)    */
+    /* ========================================== */
+    let currentQuoteIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
+    let quoteSecondsLeft = 120;
+
+    function updateQuoteDisplay(animate = true) {
+      const el = document.getElementById('motivationalQuoteText');
+      if (!el) return;
+
+      if (animate) {
+        el.classList.add('quote-hidden');
+        setTimeout(() => {
+          el.innerText = MOTIVATIONAL_QUOTES[currentQuoteIndex];
+          el.classList.remove('quote-hidden');
+        }, 250);
+      } else {
+        el.innerText = MOTIVATIONAL_QUOTES[currentQuoteIndex];
+      }
+    }
+
+    function triggerNextQuote() {
+      let nextIdx = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
+      if (nextIdx === currentQuoteIndex && MOTIVATIONAL_QUOTES.length > 1) {
+        nextIdx = (nextIdx + 1) % MOTIVATIONAL_QUOTES.length;
+      }
+      currentQuoteIndex = nextIdx;
+      quoteSecondsLeft = 120;
+      updateQuoteDisplay(true);
+      updateQuoteTimerUI();
+    }
+
+    function updateQuoteTimerUI() {
+      const timerText = document.getElementById('quoteTimerText');
+      const bar = document.getElementById('quoteProgressBar');
+      if (timerText) {
+        const mins = String(Math.floor(quoteSecondsLeft / 60)).padStart(2, '0');
+        const secs = String(quoteSecondsLeft % 60).padStart(2, '0');
+        timerText.innerText = `${mins}:${secs}`;
+      }
+      if (bar) {
+        const pct = (quoteSecondsLeft / 120) * 100;
+        bar.style.width = `${pct}%`;
+      }
+    }
+
+    setInterval(() => {
+      quoteSecondsLeft--;
+      if (quoteSecondsLeft <= 0) {
+        triggerNextQuote();
+      } else {
+        updateQuoteTimerUI();
+      }
+    }, 1000);
+
+    /* ========================================== */
+    /* AUDIO PLAYER                               */
+    /* ========================================== */
+    let audioCtx = null;
+    let isPlayingSynth = false;
+    let synthInterval = null;
+    let customAudio = new Audio();
+    let hasCustomAudio = false;
+
+    function playSynthRoulette() {
+      const vol = parseFloat(document.getElementById('musicVolume')?.value || 0.5);
+      
+      if (hasCustomAudio && customAudio.src) {
+        customAudio.volume = vol;
+        customAudio.play().catch(e => console.log('Audio error:', e));
+        isPlayingSynth = true;
+        updatePlayerUI();
+        return;
+      }
+
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+
+      isPlayingSynth = true;
+      updatePlayerUI();
+
+      const melody = [
+        { note: 220.00, dur: 0.25 },
+        { note: 261.63, dur: 0.25 },
+        { note: 293.66, dur: 0.25 },
+        { note: 329.63, dur: 0.35 },
+        { note: 293.66, dur: 0.25 },
+        { note: 329.63, dur: 0.40 },
+        { note: 293.66, dur: 0.25 },
+        { note: 261.63, dur: 0.35 },
+        { note: 220.00, dur: 0.50 },
+        { note: 196.00, dur: 0.25 },
+        { note: 220.00, dur: 0.60 },
+      ];
+
+      let noteIdx = 0;
+      synthInterval = setInterval(() => {
+        if (!isPlayingSynth || !audioCtx) return;
+        const current = melody[noteIdx % melody.length];
+        
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(current.note, audioCtx.currentTime);
+
+          const curVol = parseFloat(document.getElementById('musicVolume')?.value || 0.5) * 0.25;
+          gain.gain.setValueAtTime(curVol, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + current.dur);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start();
+          osc.stop(audioCtx.currentTime + current.dur);
+        } catch (e) {}
+
+        noteIdx++;
+      }, 260);
+    }
+
+    function stopMusic() {
+      isPlayingSynth = false;
+      if (synthInterval) clearInterval(synthInterval);
+      if (customAudio) customAudio.pause();
+      updatePlayerUI();
+    }
+
+    function updatePlayerUI() {
+      const icon = document.getElementById('musicPlayIcon');
+      const visualizer = document.getElementById('musicVisualizer');
+      if (icon) {
+        icon.setAttribute('data-lucide', isPlayingSynth ? 'pause' : 'play');
+      }
+      if (visualizer) {
+        if (isPlayingSynth) visualizer.classList.remove('eq-paused');
+        else visualizer.classList.add('eq-paused');
+      }
+      safeCreateIcons();
+    }
+
+    /* ========================================== */
+    /* CALCULATIONS & TOTALS                      */
+    /* ========================================== */
+    function calculateTotals() {
+      const rate = parseFloat(state.usdRate) || 41.5;
+
+      // 1. Cards
+      const totalCardUah = state.cardAccounts.reduce((sum, a) => sum + (parseFloat(a.balance) || 0), 0);
+      
+      // 2. Crypto
+      const futuresPnl = state.futuresTrades.reduce((sum, t) => sum + (parseFloat(t.netPnl) || 0), 0);
+      const cryptoTxNet = state.cryptoTransactions.reduce((sum, t) => sum + (t.type === 'in' ? parseFloat(t.amount) : -parseFloat(t.amount)), 0);
+      const totalCryptoUsd = (parseFloat(state.cryptoDeposit) || 0) + futuresPnl + cryptoTxNet;
+
+      // 3. Savings (Отложенные)
+      let totalSavingsUsd = 0;
+      (state.savingsGoals || []).forEach(g => {
+        const cur = parseFloat(g.currentAmount) || 0;
+        if (g.currency === 'USD') totalSavingsUsd += cur;
+        else totalSavingsUsd += (cur / rate);
+      });
+
+      // 4. Debts
+      let debtToMeUsd = 0;
+      let debtToMeUah = 0;
+      let debtIOweUsd = 0;
+      let debtIOweUah = 0;
+
+      state.debts.forEach(d => {
+        const val = parseFloat(d.amount) || 0;
+        if (d.type === 'to_me') {
+          if (d.currency === 'USD') debtToMeUsd += val;
+          else debtToMeUah += val;
+        } else {
+          if (d.currency === 'USD') debtIOweUsd += val;
+          else debtIOweUah += val;
+        }
+      });
+
+      const netDebtUsd = (debtToMeUsd - debtIOweUsd) + ((debtToMeUah - debtIOweUah) / rate);
+      const savingsContributionUsd = state.includeSavingsInNetWorth !== false ? totalSavingsUsd : 0;
+
+      const totalNetWorthUsd = totalCryptoUsd + (totalCardUah / rate) + netDebtUsd + savingsContributionUsd;
+      const totalNetWorthUah = totalNetWorthUsd * rate;
+
+      return {
+        totalCardUah,
+        totalCryptoUsd,
+        totalSavingsUsd,
+        debtToMeUsd,
+        debtToMeUah,
+        debtIOweUsd,
+        debtIOweUah,
+        netDebtUsd,
+        totalNetWorthUsd,
+        totalNetWorthUah
+      };
+    }
+
+    function renderNetWorth() {
+      const totals = calculateTotals();
+      const isUsd = state.displayCurrency === 'USD';
+
+      const mainEl = document.getElementById('totalNetWorthVal');
+      const secEl = document.getElementById('totalNetWorthSecondaryVal');
+      const savBadge = document.getElementById('netWorthSavingsBadge');
+      const cardBalEl = document.getElementById('cardTotalBalanceVal');
+      const cryptoBalEl = document.getElementById('cryptoTotalBalanceVal');
+      const savingsBalEl = document.getElementById('savingsTotalUsdVal');
+      const debtBalEl = document.getElementById('debtNetBalanceVal');
+
+      if (mainEl && secEl) {
+        if (isUsd) {
+          mainEl.innerText = `$${totals.totalNetWorthUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+          secEl.innerText = `≈ ${totals.totalNetWorthUah.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴`;
+        } else {
+          mainEl.innerText = `${totals.totalNetWorthUah.toLocaleString('uk-UA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ₴`;
+          secEl.innerText = `≈ $${totals.totalNetWorthUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+      }
+
+      if (savBadge) {
+        savBadge.innerText = `В копилках: $${totals.totalSavingsUsd.toFixed(0)}`;
+      }
+
+      if (cardBalEl) cardBalEl.innerText = `${totals.totalCardUah.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴`;
+      if (cryptoBalEl) cryptoBalEl.innerText = `$${totals.totalCryptoUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      if (savingsBalEl) savingsBalEl.innerText = `$${totals.totalSavingsUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+      
+      if (debtBalEl) {
+        const sign = totals.netDebtUsd >= 0 ? '+' : '';
+        debtBalEl.innerText = `${sign}$${totals.netDebtUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        debtBalEl.className = `text-base font-black font-mono sensitive-val ${totals.netDebtUsd >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
+      }
+
+      // Debt Subtotals
+      const toMeEl = document.getElementById('debtOwedToMeSummary');
+      const iOweEl = document.getElementById('debtIOweSummary');
+      if (toMeEl) toMeEl.innerText = `$${totals.debtToMeUsd.toFixed(0)} / ${totals.debtToMeUah.toFixed(0)}₴`;
+      if (iOweEl) iOweEl.innerText = `$${totals.debtIOweUsd.toFixed(0)} / ${totals.debtIOweUah.toFixed(0)}₴`;
+
+      // Global Goal Progress
+      const goal = state.goal || DEFAULT_DATA.goal;
+      const target = parseFloat(goal.targetAmount) || 10000;
+      const current = totals.totalNetWorthUsd;
+      const pct = Math.min(Math.max((current / target) * 100, 0), 100);
+
+      document.getElementById('goalTitleDisplay').innerText = `Глобальная цель: ${goal.title}`;
+      document.getElementById('goalProgressBar').style.width = `${pct}%`;
+      document.getElementById('goalCurrentDisplay').innerText = `$${current.toFixed(0)} / $${target.toFixed(0)}`;
+      document.getElementById('goalPercentDisplay').innerText = `${pct.toFixed(1)}%`;
+    }
+
+    function renderCardSection() {
+      const accList = document.getElementById('accountsList');
+      const select = document.getElementById('cardTxAccountSelect');
+      
+      if (accList) {
+        if (state.cardAccounts.length === 0) {
+          accList.innerHTML = `<div class="text-[11px] text-slate-500">Нет добавленных счетов</div>`;
+        } else {
+          accList.innerHTML = state.cardAccounts.map(a => `
+            <div class="group flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white/5 border border-white/10 hover:border-white/20 text-xs transition">
+              <span class="w-2 h-2 rounded-full bg-${a.color || 'sky'}-400"></span>
+              <span class="font-bold text-slate-200">${a.name}</span>
+              <span class="font-mono text-sky-400 font-bold sensitive-val">${parseFloat(a.balance).toLocaleString()} ₴</span>
+              <button type="button" onclick="deleteCardAccount('${a.id}')" class="text-slate-500 hover:text-rose-400 ml-0.5 p-0.5 transition" title="Удалить карту">
+                <i data-lucide="x" class="w-3 h-3"></i>
+              </button>
+            </div>
+          `).join('');
+        }
+      }
+
+      if (select) {
+        select.innerHTML = state.cardAccounts.map(a => `
+          <option value="${a.id}">${a.name} (${parseFloat(a.balance).toLocaleString()} ₴)</option>
+        `).join('');
+      }
+
+      const countEl = document.getElementById('cardTxCount');
+      if (countEl) countEl.innerText = `${state.cardTransactions.length} зап.`;
+
+      const txList = document.getElementById('cardTxList');
+      if (txList) {
+        if (state.cardTransactions.length === 0) {
+          txList.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Нет записей по картам</div>`;
+        } else {
+          txList.innerHTML = state.cardTransactions.slice(-25).reverse().map(tx => {
+            const acc = state.cardAccounts.find(a => a.id === tx.accountId) || { name: 'Счет' };
+            const isExp = tx.type === 'expense';
+            return `
+              <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-white/5 text-xs">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 shrink-0 rounded-lg flex items-center justify-center ${isExp ? 'bg-rose-500/10 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'} font-bold">
+                    ${isExp ? '↓' : '↑'}
+                  </div>
+                  <div class="truncate">
+                    <div class="font-bold text-slate-200 truncate">${tx.category}</div>
+                    <div class="text-[10px] text-slate-400 truncate">${acc.name} ${tx.note ? '• ' + tx.note : ''}</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="font-mono font-bold sensitive-val ${isExp ? 'text-rose-400' : 'text-emerald-400'}">
+                    ${isExp ? '-' : '+'}${parseFloat(tx.amount).toLocaleString()} ₴
+                  </span>
+                  <button type="button" onclick="deleteCardTx('${tx.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+    }
+
+    window.deleteCardAccount = function(accId) {
+      state.cardAccounts = state.cardAccounts.filter(a => a.id !== accId);
+      if (state.cardAccounts.length === 0) {
+        state.cardAccounts.push({ id: 'acc_' + Date.now(), name: 'Основной', balance: 0, color: 'sky' });
+      }
+      saveState();
+    };
+
+    window.deleteCardTx = function(id) {
+      const tx = state.cardTransactions.find(t => t.id === id);
+      if (tx) {
+        const acc = state.cardAccounts.find(a => a.id === tx.accountId);
+        if (acc) {
+          if (tx.type === 'expense') acc.balance += parseFloat(tx.amount);
+          else acc.balance -= parseFloat(tx.amount);
+        }
+        state.cardTransactions = state.cardTransactions.filter(t => t.id !== id);
+        saveState();
+      }
+    };
+
+    /* ========================================== */
+    /* SAVINGS (ОТЛОЖЕННЫЕ) SECTION               */
+    /* ========================================== */
+    let activeSavingsAction = { id: null, mode: 'add' };
+
+    function renderSavingsSection() {
+      const listEl = document.getElementById('savingsGoalsList');
+      const countEl = document.getElementById('savingsGoalsCount');
+      const chk = document.getElementById('includeSavingsInNwCheckbox');
+
+      if (chk) chk.checked = state.includeSavingsInNetWorth !== false;
+      if (countEl) countEl.innerText = `${(state.savingsGoals || []).length} целей`;
+
+      if (!listEl) return;
+
+      if (!state.savingsGoals || state.savingsGoals.length === 0) {
+        listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Создайте первую копилку для вашей цели</div>`;
+        return;
+      }
+
+      listEl.innerHTML = state.savingsGoals.map(g => {
+        const cur = parseFloat(g.currentAmount) || 0;
+        const target = parseFloat(g.targetAmount) || 1;
+        const pct = Math.min(Math.max((cur / target) * 100, 0), 100);
+        const sym = g.currency === 'USD' ? '$' : '₴';
+        const remaining = Math.max(target - cur, 0);
+        const isCompleted = cur >= target;
+
+        return `
+          <div class="p-3.5 rounded-2xl bg-slate-900/75 border ${isCompleted ? 'border-emerald-400/50 bg-emerald-950/20' : 'border-white/5'} space-y-2.5 transition">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <div class="flex items-center gap-1.5">
+                  <span class="font-bold text-xs text-white">${g.title}</span>
+                  ${isCompleted ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono font-bold">ВЫПОЛНЕНО 🎉</span>' : ''}
+                </div>
+                <div class="text-[10px] font-mono text-slate-400 mt-0.5 sensitive-val">
+                  Осталось: ${remaining.toLocaleString()} ${sym}
+                </div>
+              </div>
+              <button type="button" onclick="deleteSavingsGoal('${g.id}')" class="text-slate-500 hover:text-rose-400 p-1" title="Удалить цель">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/5">
+              <div class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500" style="width: ${pct}%;"></div>
+            </div>
+
+            <div class="flex items-center justify-between text-[11px] font-mono">
+              <span class="font-bold text-emerald-300 sensitive-val">${cur.toLocaleString()} ${sym} <span class="text-slate-500 font-normal">/ ${target.toLocaleString()} ${sym}</span></span>
+              <span class="font-bold text-emerald-400">${pct.toFixed(1)}%</span>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-2 gap-1.5 pt-1">
+              <button type="button" onclick="openSavingsModal('${g.id}', 'add')" class="py-1.5 px-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-[11px] font-bold transition flex items-center justify-center gap-1 active:scale-95">
+                <i data-lucide="plus" class="w-3 h-3"></i>
+                <span>Отложить</span>
+              </button>
+              <button type="button" onclick="openSavingsModal('${g.id}', 'sub')" class="py-1.5 px-2 rounded-xl bg-white/5 hover:bg-rose-500/15 text-slate-300 hover:text-rose-300 border border-white/10 text-[11px] font-bold transition flex items-center justify-center gap-1 active:scale-95">
+                <i data-lucide="minus" class="w-3 h-3"></i>
+                <span>Забрать</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.openSavingsModal = function(goalId, mode) {
+      const goal = state.savingsGoals.find(g => g.id === goalId);
+      if (!goal) return;
+
+      activeSavingsAction = { id: goalId, mode };
+      const sym = goal.currency === 'USD' ? '$' : '₴';
+
+      document.getElementById('savModalTitle').innerHTML = mode === 'add'
+        ? `<i data-lucide="piggy-bank" class="w-4 h-4 text-emerald-400"></i><span>Отложить в копилку (+)</span>`
+        : `<i data-lucide="arrow-down-left" class="w-4 h-4 text-rose-400"></i><span>Взять из копилки (-)</span>`;
+
+      document.getElementById('savModalGoalName').innerText = goal.title;
+      document.getElementById('savModalCurrentBal').innerText = `${goal.currentAmount.toLocaleString()} / ${goal.targetAmount.toLocaleString()} ${sym}`;
+      document.getElementById('savModalInputLabel').innerText = `Сумма (${sym}):`;
+      document.getElementById('savModalAmountInput').value = '';
+
+      const confirmBtn = document.getElementById('confirmSavActionBtn');
+      confirmBtn.className = mode === 'add'
+        ? 'w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-600/30 active:scale-95 transition'
+        : 'w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/30 active:scale-95 transition';
+
+      document.getElementById('modalSavingsAction').classList.remove('hidden');
+      safeCreateIcons();
+      setTimeout(() => document.getElementById('savModalAmountInput').focus(), 50);
+    };
+
+    window.deleteSavingsGoal = function(goalId) {
+      state.savingsGoals = state.savingsGoals.filter(g => g.id !== goalId);
+      saveState();
+    };
+
+    /* ========================================== */
+    /* CRYPTO & FUTURES SECTION                   */
+    /* ========================================== */
+    let pnlChartInstance = null;
+
+    function renderCryptoFuturesSection() {
+      const listEl = document.getElementById('futuresTradesList');
+      if (listEl) {
+        if (state.futuresTrades.length === 0) {
+          listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Нет закрытых сделок</div>`;
+        } else {
+          listEl.innerHTML = state.futuresTrades.slice(-25).reverse().map(t => {
+            const isWin = parseFloat(t.netPnl) >= 0;
+            return `
+              <div class="p-2.5 rounded-xl bg-slate-900/70 border border-white/5 text-xs flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-black font-mono ${t.dir === 'LONG' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+                    ${t.dir} ${t.leverage}x
+                  </span>
+                  <div>
+                    <span class="font-bold text-slate-200">${t.coin}</span>
+                    <span class="text-[10px] text-slate-400 block font-mono">Маржа: $${t.margin} • Ком: $${t.fee}</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="text-right font-mono sensitive-val">
+                    <span class="font-extrabold ${isWin ? 'text-emerald-400' : 'text-rose-400'}">
+                      ${isWin ? '+' : ''}$${parseFloat(t.netPnl).toFixed(2)}
+                    </span>
+                  </div>
+                  <button type="button" onclick="deleteFuturesTrade('${t.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      const countEl = document.getElementById('futuresTradeCount');
+      if (countEl) countEl.innerText = `${state.futuresTrades.length} сделок`;
+
+      renderPnlChart();
+      renderProAnalytics();
+    }
+
+    window.deleteFuturesTrade = function(id) {
+      state.futuresTrades = state.futuresTrades.filter(t => t.id !== id);
+      saveState();
+    };
+
+    function renderPnlChart() {
+      const canvas = document.getElementById('pnlChartCanvas');
+      if (!canvas || !window.Chart) return;
+
+      const labels = ['Старт'];
+      let cumPnl = 0;
+      const data = [0];
+
+      state.futuresTrades.forEach((t, i) => {
+        cumPnl += parseFloat(t.netPnl) || 0;
+        labels.push(`#${i+1}`);
+        data.push(cumPnl);
+      });
+
+      if (pnlChartInstance) {
+        pnlChartInstance.destroy();
+      }
+
+      const ctx = canvas.getContext('2d');
+      pnlChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            borderColor: '#a855f7',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.35,
+            pointRadius: data.length > 25 ? 0 : 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { display: false },
+            y: {
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#94a3b8', font: { size: 9, family: 'JetBrains Mono' } }
+            }
+          }
+        }
+      });
+
+      const wins = state.futuresTrades.filter(t => parseFloat(t.netPnl) > 0).length;
+      const total = state.futuresTrades.length;
+      const wr = total > 0 ? ((wins / total) * 100).toFixed(0) : 0;
+      const wrBadge = document.getElementById('pnlWinrateBadge');
+      if (wrBadge) wrBadge.innerText = `WR: ${wr}%`;
+    }
+
+    function renderProAnalytics() {
+      let grossProfit = 0;
+      let grossLoss = 0;
+      let totalFees = 0;
+      let winCount = 0;
+      let lossCount = 0;
+      const coinStats = {};
+
+      state.futuresTrades.forEach(t => {
+        const net = parseFloat(t.netPnl) || 0;
+        const fee = parseFloat(t.fee) || 0;
+        totalFees += fee;
+
+        if (net > 0) {
+          grossProfit += net;
+          winCount++;
+        } else {
+          grossLoss += Math.abs(net);
+          lossCount++;
+        }
+
+        if (!coinStats[t.coin]) coinStats[t.coin] = { pnl: 0, count: 0 };
+        coinStats[t.coin].pnl += net;
+        coinStats[t.coin].count++;
+      });
+
+      const pf = grossLoss > 0 ? (grossProfit / grossLoss).toFixed(2) : (grossProfit > 0 ? 'MAX' : '0.00');
+      const avgWin = winCount > 0 ? (grossProfit / winCount).toFixed(1) : '0';
+      const avgLoss = lossCount > 0 ? (grossLoss / lossCount).toFixed(1) : '0';
+
+      document.getElementById('proProfitFactorVal').innerText = pf;
+      document.getElementById('proTotalFeesVal').innerText = `$${totalFees.toFixed(1)}`;
+      document.getElementById('proAvgWinVal').innerText = `+$${avgWin}`;
+      document.getElementById('proAvgLossVal').innerText = `-$${avgLoss}`;
+
+      const sortedCoins = Object.entries(coinStats).sort((a,b) => b[1].pnl - a[1].pnl);
+      const lbEl = document.getElementById('proCoinLeaderboard');
+      if (lbEl) {
+        if (sortedCoins.length === 0) {
+          lbEl.innerHTML = `<div class="text-slate-500 py-2">Сделок для аналитики пока нет</div>`;
+        } else {
+          lbEl.innerHTML = sortedCoins.map(([coin, st]) => `
+            <div class="flex items-center justify-between p-1.5 rounded-lg bg-slate-950/40 border border-white/5">
+              <span>${coin} (${st.count})</span>
+              <span class="font-bold sensitive-val ${st.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}">
+                ${st.pnl >= 0 ? '+' : ''}$${st.pnl.toFixed(1)}
+              </span>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    function renderCryptoWalletTx() {
+      const listEl = document.getElementById('cryptoWalletTxList');
+      if (listEl) {
+        if (state.cryptoTransactions.length === 0) {
+          listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Нет движений кошелька</div>`;
+        } else {
+          listEl.innerHTML = state.cryptoTransactions.slice(-25).reverse().map(tx => `
+            <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/70 border border-white/5 text-xs">
+              <div>
+                <div class="font-bold text-slate-200">${tx.category}</div>
+                <div class="text-[10px] text-slate-400">${tx.asset}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold sensitive-val ${tx.type === 'in' ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${tx.type === 'in' ? '+' : '-'}$${parseFloat(tx.amount).toFixed(2)}
+                </span>
+                <button type="button" onclick="deleteCryptoWalletTx('${tx.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+    }
+
+    window.deleteCryptoWalletTx = function(id) {
+      state.cryptoTransactions = state.cryptoTransactions.filter(t => t.id !== id);
+      saveState();
+    };
+
+    function renderDebtsSection() {
+      const listEl = document.getElementById('debtsList');
+      if (listEl) {
+        if (state.debts.length === 0) {
+          listEl.innerHTML = `<div class="text-center py-6 text-xs text-slate-500">Нет активных долгов</div>`;
+        } else {
+          listEl.innerHTML = state.debts.map(d => {
+            const isToMe = d.type === 'to_me';
+            const curSign = d.currency === 'USD' ? '$' : '₴';
+            return `
+              <div class="p-3 rounded-xl bg-slate-900/70 border border-white/5 text-xs flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-black ${isToMe ? 'bg-emerald-500/20 text-emerald-300' : 'bg-rose-500/20 text-rose-300'}">
+                      ${isToMe ? 'МНЕ' : 'Я'}
+                    </span>
+                    <span class="font-bold text-slate-200 truncate">${d.person}</span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 mt-1 truncate">${d.note || 'Без описания'}</div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="font-mono font-black text-xs sensitive-val ${isToMe ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${isToMe ? '+' : '-'}${parseFloat(d.amount).toLocaleString()} ${curSign}
+                  </span>
+                  <button type="button" onclick="settleDebt('${d.id}')" class="px-2 py-1 rounded-lg bg-white/5 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-300 text-[10px] font-bold transition">
+                    Закрыть
+                  </button>
+                  <button type="button" onclick="deleteDebt('${d.id}')" class="text-slate-500 hover:text-rose-400 p-1">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
+      const countEl = document.getElementById('debtsCount');
+      if (countEl) countEl.innerText = `${state.debts.length} долгов`;
+    }
+
+    window.settleDebt = function(id) {
+      state.debts = state.debts.filter(d => d.id !== id);
+      saveState();
+    };
+
+    window.deleteDebt = function(id) {
+      state.debts = state.debts.filter(d => d.id !== id);
+      saveState();
+    };
+
+    function setColumnView(view) {
+      state.activeView = view;
+      const colCard = document.getElementById('columnCard');
+      const colCrypto = document.getElementById('columnCrypto');
+      const colSavings = document.getElementById('columnSavings');
+      const colDebt = document.getElementById('columnDebt');
+      const container = document.getElementById('columnsContainer');
+
+      document.querySelectorAll('.view-dock-btn').forEach(btn => {
+        if (btn.dataset.view === view) {
+          btn.className = 'view-dock-btn relative p-2.5 rounded-2xl active:scale-95 transition flex flex-col items-center group bg-sky-500/20 text-sky-300 border border-sky-500/40';
+        } else {
+          btn.className = 'view-dock-btn relative p-2.5 rounded-2xl text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition flex flex-col items-center group border border-transparent';
+        }
+      });
+
+      if (!colCard || !colCrypto || !colSavings || !colDebt || !container) return;
+
+      colCard.classList.add('hidden');
+      colCrypto.classList.add('hidden');
+      colSavings.classList.add('hidden');
+      colDebt.classList.add('hidden');
+
+      if (view === 'all') {
+        container.className = 'grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-4 gap-5 items-start';
+        colCard.classList.remove('hidden');
+        colCrypto.classList.remove('hidden');
+        colSavings.classList.remove('hidden');
+        colDebt.classList.remove('hidden');
+      } else {
+        container.className = 'grid grid-cols-1 max-w-3xl mx-auto gap-6 items-start';
+        if (view === 'card') colCard.classList.remove('hidden');
+        if (view === 'crypto') colCrypto.classList.remove('hidden');
+        if (view === 'savings') colSavings.classList.remove('hidden');
+        if (view === 'debt') colDebt.classList.remove('hidden');
+      }
+
+      if (pnlChartInstance) {
+        setTimeout(() => pnlChartInstance.resize(), 100);
+      }
+    }
+
+    let calcState = {
+      dir: 'LONG',
+      riskPct: 2,
+      leverage: 20
+    };
+
+    function recalculateBigCalc() {
+      const deposit = parseFloat(document.getElementById('calcDepositInput')?.value || 1000);
+      const entry = parseFloat(document.getElementById('calcEntryPrice')?.value || 65000);
+      const stop = parseFloat(document.getElementById('calcStopPrice')?.value || 64000);
+      const take = parseFloat(document.getElementById('calcTakePrice')?.value || 67000);
+      const lev = calcState.leverage;
+      const riskPct = calcState.riskPct;
+
+      const riskUsd = deposit * (riskPct / 100);
+      const priceDiff = Math.abs(entry - stop);
+      const pctLoss = entry > 0 ? (priceDiff / entry) : 0;
+
+      let positionSizeUsd = 0;
+      let marginUsd = 0;
+      let liqPrice = 0;
+      let rewardUsd = 0;
+      let rrRatio = '0 : 0';
+
+      if (pctLoss > 0) {
+        positionSizeUsd = riskUsd / pctLoss;
+        marginUsd = positionSizeUsd / lev;
+
+        const takeDiff = Math.abs(take - entry);
+        rewardUsd = (takeDiff / entry) * positionSizeUsd;
+        const rr = riskUsd > 0 ? (rewardUsd / riskUsd).toFixed(1) : 0;
+        rrRatio = `1 : ${rr}`;
+
+        if (calcState.dir === 'LONG') {
+          liqPrice = entry * (1 - (1 / lev) * 0.95);
+        } else {
+          liqPrice = entry * (1 + (1 / lev) * 0.95);
+        }
+      }
+
+      document.getElementById('calcResultRiskUsd').innerText = `-$${riskUsd.toFixed(2)}`;
+      document.getElementById('calcResultMarginUsd').innerText = `$${marginUsd.toFixed(2)}`;
+      document.getElementById('calcResultSizeUsd').innerText = `$${positionSizeUsd.toFixed(0)}`;
+      document.getElementById('calcResultLiqPrice').innerText = `~${liqPrice.toFixed(1)}`;
+      document.getElementById('calcResultRewardUsd').innerText = `+$${rewardUsd.toFixed(2)}`;
+      document.getElementById('calcResultRrRatio').innerText = rrRatio;
+    }
+
+    function applyPrivacyMode() {
+      const icon = document.getElementById('privacyEyeIcon');
+      if (state.privacyMode) {
+        document.body.classList.add('privacy-active');
+        if (icon) icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        document.body.classList.remove('privacy-active');
+        if (icon) icon.setAttribute('data-lucide', 'eye');
+      }
+      safeCreateIcons();
+    }
+
+    /* Master Render */
+    function renderAll() {
+      renderNetWorth();
+      renderCardSection();
+      renderCryptoFuturesSection();
+      renderCryptoWalletTx();
+      renderSavingsSection();
+      renderDebtsSection();
+      applyPrivacyMode();
+      safeCreateIcons();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      
+      // Initial Quote
+      updateQuoteDisplay(false);
+
+      // Next Quote Button
+      document.getElementById('nextQuoteBtn')?.addEventListener('click', triggerNextQuote);
+
+      // Privacy Mode Toggle + Hotkey Alt+H
+      document.getElementById('privacyModeBtn')?.addEventListener('click', () => {
+        state.privacyMode = !state.privacyMode;
+        saveState();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.altKey && (e.code === 'KeyH' || e.key === 'h' || e.key === 'р')) {
+          e.preventDefault();
+          state.privacyMode = !state.privacyMode;
+          saveState();
+        }
+      });
+
+      // Quick Converter Popover
+      const convPop = document.getElementById('converterPopover');
+      const convUsd = document.getElementById('convUsdInput');
+      const convUah = document.getElementById('convUahInput');
+
+      document.getElementById('toggleConverterBtn')?.addEventListener('click', () => {
+        convPop.classList.toggle('hidden');
+      });
+      document.getElementById('closeConverterBtn')?.addEventListener('click', () => {
+        convPop.classList.add('hidden');
+      });
+
+      convUsd?.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        convUah.value = !isNaN(v) ? (v * state.usdRate).toFixed(2) : '';
+      });
+      convUah?.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        convUsd.value = !isNaN(v) ? (v / state.usdRate).toFixed(2) : '';
+      });
+
+      // Anti-Tilt Checklist logic
+      const tiltChecks = document.querySelectorAll('.tilt-check');
+      const tiltBadge = document.getElementById('antiTiltStatusBadge');
+      tiltChecks.forEach(chk => {
+        chk.addEventListener('change', () => {
+          const checkedCount = Array.from(tiltChecks).filter(c => c.checked).length;
+          if (tiltBadge) {
+            if (checkedCount === 3) {
+              tiltBadge.innerText = 'READY TO TRADE ✓';
+              tiltBadge.className = 'text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40';
+            } else {
+              tiltBadge.innerText = `${checkedCount}/3`;
+              tiltBadge.className = 'text-[9px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-400';
+            }
+          }
+        });
+      });
+
+      // Initial state view
+      if (state.activeView) {
+        setColumnView(state.activeView);
+      }
+
+      // Currency Toggle
+      document.getElementById('curUsdBtn')?.addEventListener('click', () => {
+        state.displayCurrency = 'USD';
+        document.getElementById('curUsdBtn').className = 'px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm';
+        document.getElementById('curUahBtn').className = 'px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition';
+        saveState();
+      });
+
+      document.getElementById('curUahBtn')?.addEventListener('click', () => {
+        state.displayCurrency = 'UAH';
+        document.getElementById('curUahBtn').className = 'px-2 py-1 text-xs font-bold rounded-xl transition bg-sky-500 text-white shadow-sm';
+        document.getElementById('curUsdBtn').className = 'px-2 py-1 text-xs font-bold rounded-xl text-slate-400 hover:text-white transition';
+        saveState();
+      });
+
+      // USD Rate
+      const rateInput = document.getElementById('usdUahRateInput');
+      if (rateInput) {
+        rateInput.value = state.usdRate;
+        rateInput.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          if (val > 0) {
+            state.usdRate = val;
+            saveState();
+          }
+        });
+      }
+
+      // Languages
+      document.getElementById('langRuBtn')?.addEventListener('click', () => applyLanguage('ru'));
+      document.getElementById('langUaBtn')?.addEventListener('click', () => applyLanguage('ua'));
+
+      // Right Dock View Buttons
+      document.getElementById('viewAllBtn')?.addEventListener('click', () => setColumnView('all'));
+      document.getElementById('viewCardBtn')?.addEventListener('click', () => setColumnView('card'));
+      document.getElementById('viewCryptoBtn')?.addEventListener('click', () => setColumnView('crypto'));
+      document.getElementById('viewSavingsBtn')?.addEventListener('click', () => setColumnView('savings'));
+      document.getElementById('viewDebtBtn')?.addEventListener('click', () => setColumnView('debt'));
+      document.getElementById('scrollTopBtn')?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+
+      // Music Player
+      document.getElementById('toggleMusicBtn')?.addEventListener('click', () => {
+        if (isPlayingSynth) stopMusic();
+        else playSynthRoulette();
+      });
+
+      document.getElementById('musicVolume')?.addEventListener('input', (e) => {
+        const vol = parseFloat(e.target.value);
+        if (customAudio) customAudio.volume = vol;
+      });
+
+      document.getElementById('musicFileInput')?.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          if (customAudio) customAudio.pause();
+          customAudio.src = URL.createObjectURL(file);
+          hasCustomAudio = true;
+          const cleanName = file.name.replace(/\.[^/.]+$/, "");
+          document.getElementById('musicTrackName').innerText = cleanName;
+          stopMusic();
+          playSynthRoulette();
+        }
+      });
+
+      // Card TX Form & Types
+      let cardTxType = 'expense';
+      const cExpBtn = document.getElementById('cardTypeExpenseBtn');
+      const cIncBtn = document.getElementById('cardTypeIncomeBtn');
+
+      cExpBtn?.addEventListener('click', () => {
+        cardTxType = 'expense';
+        cExpBtn.className = 'px-2 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        cIncBtn.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400';
+      });
+
+      cIncBtn?.addEventListener('click', () => {
+        cardTxType = 'income';
+        cIncBtn.className = 'px-2 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        cExpBtn.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400';
+      });
+
+      document.getElementById('cardTxForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amt = parseFloat(document.getElementById('cardTxAmount').value);
+        const accId = document.getElementById('cardTxAccountSelect').value;
+        const cat = document.getElementById('cardTxCategory').value;
+        const note = document.getElementById('cardTxNote').value;
+
+        if (amt > 0) {
+          const acc = state.cardAccounts.find(a => a.id === accId);
+          if (acc) {
+            if (cardTxType === 'expense') acc.balance -= amt;
+            else acc.balance += amt;
+          }
+
+          state.cardTransactions.push({
+            id: 'ctx_' + Date.now(),
+            accountId: accId,
+            type: cardTxType,
+            amount: amt,
+            category: cat,
+            note: note,
+            date: new Date().toISOString().split('T')[0]
+          });
+
+          document.getElementById('cardTxAmount').value = '';
+          document.getElementById('cardTxNote').value = '';
+          saveState();
+        }
+      });
+
+      // Savings (Отложенные) Handlers
+      document.getElementById('includeSavingsInNwCheckbox')?.addEventListener('change', (e) => {
+        state.includeSavingsInNetWorth = e.target.checked;
+        saveState();
+      });
+
+      document.getElementById('savingsGoalForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('savTitleInput').value.trim();
+        const cur = document.getElementById('savCurrencySelect').value;
+        const target = parseFloat(document.getElementById('savTargetInput').value);
+        const initial = parseFloat(document.getElementById('savInitialInput').value) || 0;
+
+        if (title && target > 0) {
+          state.savingsGoals.push({
+            id: 'sav_' + Date.now(),
+            title,
+            currency: cur,
+            targetAmount: target,
+            currentAmount: initial
+          });
+
+          document.getElementById('savTitleInput').value = '';
+          document.getElementById('savTargetInput').value = '';
+          document.getElementById('savInitialInput').value = '0';
+          saveState();
+        }
+      });
+
+      document.getElementById('closeSavModalBtn')?.addEventListener('click', () => {
+        document.getElementById('modalSavingsAction').classList.add('hidden');
+      });
+
+      document.getElementById('confirmSavActionBtn')?.addEventListener('click', () => {
+        const amt = parseFloat(document.getElementById('savModalAmountInput').value);
+        if (amt > 0 && activeSavingsAction.id) {
+          const goal = state.savingsGoals.find(g => g.id === activeSavingsAction.id);
+          if (goal) {
+            if (activeSavingsAction.mode === 'add') {
+              goal.currentAmount = (parseFloat(goal.currentAmount) || 0) + amt;
+            } else {
+              goal.currentAmount = Math.max((parseFloat(goal.currentAmount) || 0) - amt, 0);
+            }
+            saveState();
+          }
+          document.getElementById('modalSavingsAction').classList.add('hidden');
+        }
+      });
+
+      // Crypto Tabs: Trades / Wallet Tx / Pro
+      const tabTrades = document.getElementById('tabFuturesTradesBtn');
+      const tabCryptoTx = document.getElementById('tabCryptoTxBtn');
+      const tabPro = document.getElementById('tabProAnalysisBtn');
+
+      const secFutures = document.getElementById('cryptoFuturesSection');
+      const secTx = document.getElementById('cryptoTxSection');
+      const secPro = document.getElementById('cryptoProSection');
+
+      tabTrades?.addEventListener('click', () => {
+        secFutures.classList.remove('hidden');
+        secTx.classList.add('hidden');
+        secPro.classList.add('hidden');
+        tabTrades.className = 'flex-1 py-1.5 rounded-xl font-bold bg-purple-500 text-white shadow-sm transition';
+        tabCryptoTx.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-white transition';
+        tabPro.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-amber-400 transition flex items-center justify-center gap-1';
+        if (pnlChartInstance) pnlChartInstance.resize();
+      });
+
+      tabCryptoTx?.addEventListener('click', () => {
+        secFutures.classList.add('hidden');
+        secTx.classList.remove('hidden');
+        secPro.classList.add('hidden');
+        tabCryptoTx.className = 'flex-1 py-1.5 rounded-xl font-bold bg-purple-500 text-white shadow-sm transition';
+        tabTrades.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-white transition';
+        tabPro.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-amber-400 transition flex items-center justify-center gap-1';
+      });
+
+      tabPro?.addEventListener('click', () => {
+        secFutures.classList.add('hidden');
+        secTx.classList.add('hidden');
+        secPro.classList.remove('hidden');
+        tabPro.className = 'flex-1 py-1.5 rounded-xl font-bold bg-amber-500 text-slate-950 shadow-sm transition flex items-center justify-center gap-1';
+        tabTrades.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-white transition';
+        tabCryptoTx.className = 'flex-1 py-1.5 rounded-xl font-bold text-slate-400 hover:text-white transition';
+      });
+
+      // Futures Trade Form
+      let tradeDir = 'LONG';
+      let tradeResult = 'WIN';
+      const fDirLong = document.getElementById('tradeDirLongBtn');
+      const fDirShort = document.getElementById('tradeDirShortBtn');
+      const fResWin = document.getElementById('tradeResultWinBtn');
+      const fResLoss = document.getElementById('tradeResultLossBtn');
+
+      fDirLong?.addEventListener('click', () => {
+        tradeDir = 'LONG';
+        fDirLong.className = 'px-2 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        fDirShort.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400';
+      });
+
+      fDirShort?.addEventListener('click', () => {
+        tradeDir = 'SHORT';
+        fDirShort.className = 'px-2 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        fDirLong.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400';
+      });
+
+      fResWin?.addEventListener('click', () => {
+        tradeResult = 'WIN';
+        fResWin.className = 'px-2 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        fResLoss.className = 'px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-rose-400';
+        updateNetPnlPreview();
+      });
+
+      fResLoss?.addEventListener('click', () => {
+        tradeResult = 'LOSS';
+        fResLoss.className = 'px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        fResWin.className = 'px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-emerald-400';
+        updateNetPnlPreview();
+      });
+
+      function updateNetPnlPreview() {
+        const gross = parseFloat(document.getElementById('tradeGrossPnlInput')?.value || 0);
+        const fee = parseFloat(document.getElementById('tradeFeeInput')?.value || 0);
+        const net = tradeResult === 'WIN' ? (gross - fee) : (-gross - fee);
+        const preview = document.getElementById('tradePreviewNetPnl');
+        if (preview) {
+          preview.innerText = `${net >= 0 ? '+' : ''}$${net.toFixed(2)}`;
+          preview.className = net >= 0 ? 'text-xs font-bold font-mono text-emerald-400' : 'text-xs font-bold font-mono text-rose-400';
+        }
+      }
+
+      document.getElementById('tradeGrossPnlInput')?.addEventListener('input', updateNetPnlPreview);
+      document.getElementById('tradeFeeInput')?.addEventListener('input', updateNetPnlPreview);
+
+      document.getElementById('futuresTradeForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const coin = document.getElementById('tradeCoinInput').value.trim();
+        const lev = parseInt(document.getElementById('tradeLeverageInput').value) || 20;
+        const margin = parseFloat(document.getElementById('tradeMarginInput').value) || 0;
+        const fee = parseFloat(document.getElementById('tradeFeeInput').value) || 0;
+        const gross = parseFloat(document.getElementById('tradeGrossPnlInput').value) || 0;
+        const net = tradeResult === 'WIN' ? (gross - fee) : (-gross - fee);
+
+        if (coin) {
+          state.futuresTrades.push({
+            id: 'ft_' + Date.now(),
+            coin,
+            dir: tradeDir,
+            leverage: lev,
+            margin,
+            fee,
+            grossPnl: gross,
+            netPnl: net,
+            date: new Date().toISOString().split('T')[0]
+          });
+
+          document.getElementById('tradeGrossPnlInput').value = '';
+          updateNetPnlPreview();
+          saveState();
+        }
+      });
+
+      // Crypto Wallet TX Form
+      let cryptoTxType = 'out';
+      const wOutBtn = document.getElementById('cryptoTxTypeOutBtn');
+      const wInBtn = document.getElementById('cryptoTxTypeInBtn');
+
+      wOutBtn?.addEventListener('click', () => {
+        cryptoTxType = 'out';
+        wOutBtn.className = 'px-2.5 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        wInBtn.className = 'px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400';
+      });
+
+      wInBtn?.addEventListener('click', () => {
+        cryptoTxType = 'in';
+        wInBtn.className = 'px-2.5 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        wOutBtn.className = 'px-2.5 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400';
+      });
+
+      document.getElementById('cryptoWalletTxForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amt = parseFloat(document.getElementById('cryptoWalletAmount').value);
+        const asset = document.getElementById('cryptoWalletAsset').value;
+        const cat = document.getElementById('cryptoWalletCategory').value;
+
+        if (amt > 0) {
+          state.cryptoTransactions.push({
+            id: 'wtx_' + Date.now(),
+            type: cryptoTxType,
+            amount: amt,
+            asset,
+            category: cat,
+            date: new Date().toISOString().split('T')[0]
+          });
+
+          document.getElementById('cryptoWalletAmount').value = '';
+          saveState();
+        }
+      });
+
+      // Debt Form
+      let debtType = 'to_me';
+      const dToMeBtn = document.getElementById('debtTypeToMeBtn');
+      const dIOweBtn = document.getElementById('debtTypeIOweBtn');
+
+      dToMeBtn?.addEventListener('click', () => {
+        debtType = 'to_me';
+        dToMeBtn.className = 'px-2 py-1 rounded-lg font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        dIOweBtn.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-rose-400';
+      });
+
+      dIOweBtn?.addEventListener('click', () => {
+        debtType = 'i_owe';
+        dIOweBtn.className = 'px-2 py-1 rounded-lg font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        dToMeBtn.className = 'px-2 py-1 rounded-lg font-bold text-slate-400 hover:text-emerald-400';
+      });
+
+      document.getElementById('debtForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const amt = parseFloat(document.getElementById('debtAmountInput').value);
+        const cur = document.getElementById('debtCurrencySelect').value;
+        const person = document.getElementById('debtPersonInput').value.trim();
+        const note = document.getElementById('debtNoteInput').value.trim();
+
+        if (amt > 0 && person) {
+          state.debts.push({
+            id: 'd_' + Date.now(),
+            type: debtType,
+            amount: amt,
+            currency: cur,
+            person,
+            note,
+            date: new Date().toISOString().split('T')[0]
+          });
+
+          document.getElementById('debtAmountInput').value = '';
+          document.getElementById('debtPersonInput').value = '';
+          document.getElementById('debtNoteInput').value = '';
+          saveState();
+        }
+      });
+
+      // Big PRO Calculator Modal Handlers
+      const modalBigCalc = document.getElementById('modalBigCalc');
+      const openCalc = () => {
+        modalBigCalc.classList.remove('hidden');
+        recalculateBigCalc();
+      };
+      const closeCalc = () => modalBigCalc.classList.add('hidden');
+
+      document.getElementById('openBigCalculatorBtn')?.addEventListener('click', openCalc);
+      document.getElementById('quickOpenCalcBtn')?.addEventListener('click', openCalc);
+      document.getElementById('closeBigCalcModalBtn')?.addEventListener('click', closeCalc);
+      document.getElementById('closeBigCalcBottomBtn')?.addEventListener('click', closeCalc);
+
+      document.getElementById('calcDirLongBtn')?.addEventListener('click', () => {
+        calcState.dir = 'LONG';
+        document.getElementById('calcDirLongBtn').className = 'py-2.5 rounded-xl font-bold text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        document.getElementById('calcDirShortBtn').className = 'py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-rose-400 border border-transparent';
+        recalculateBigCalc();
+      });
+
+      document.getElementById('calcDirShortBtn')?.addEventListener('click', () => {
+        calcState.dir = 'SHORT';
+        document.getElementById('calcDirShortBtn').className = 'py-2.5 rounded-xl font-bold text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30';
+        document.getElementById('calcDirLongBtn').className = 'py-2.5 rounded-xl font-bold text-xs text-slate-400 hover:text-emerald-400 border border-transparent';
+        recalculateBigCalc();
+      });
+
+      document.querySelectorAll('.calc-risk-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          calcState.riskPct = parseFloat(btn.dataset.risk);
+          document.querySelectorAll('.calc-risk-pill').forEach(b => {
+            b.className = 'calc-risk-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10 hover:border-purple-400';
+          });
+          btn.className = 'calc-risk-pill py-2 rounded-xl text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-500/50';
+          document.getElementById('calcRiskCustomInput').value = '';
+          recalculateBigCalc();
+        });
+      });
+
+      document.getElementById('calcRiskCustomInput')?.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (val > 0) {
+          calcState.riskPct = val;
+          document.querySelectorAll('.calc-risk-pill').forEach(b => {
+            b.className = 'calc-risk-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10';
+          });
+          recalculateBigCalc();
+        }
+      });
+
+      const levSlider = document.getElementById('calcLeverageSlider');
+      const levDisplay = document.getElementById('calcLeverageDisplay');
+      levSlider?.addEventListener('input', (e) => {
+        calcState.leverage = parseInt(e.target.value);
+        if (levDisplay) levDisplay.innerText = `${calcState.leverage}x`;
+        recalculateBigCalc();
+      });
+
+      document.querySelectorAll('.calc-lev-pill').forEach(btn => {
+        btn.addEventListener('click', () => {
+          calcState.leverage = parseInt(btn.dataset.lev);
+          if (levSlider) levSlider.value = calcState.leverage;
+          if (levDisplay) levDisplay.innerText = `${calcState.leverage}x`;
+          document.querySelectorAll('.calc-lev-pill').forEach(b => {
+            b.className = 'calc-lev-pill py-2 rounded-xl text-xs font-bold bg-white/5 text-slate-300 border border-white/10';
+          });
+          btn.className = 'calc-lev-pill py-2 rounded-xl text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-500/50';
+          recalculateBigCalc();
+        });
+      });
+
+      ['calcDepositInput', 'calcEntryPrice', 'calcStopPrice', 'calcTakePrice'].forEach(id => {
+        document.getElementById(id)?.addEventListener('input', recalculateBigCalc);
+      });
+
+      document.getElementById('applyCalcToTradeBtn')?.addEventListener('click', () => {
+        const marginText = document.getElementById('calcResultMarginUsd')?.innerText.replace('$', '') || '50';
+        document.getElementById('tradeMarginInput').value = parseFloat(marginText).toFixed(1);
+        document.getElementById('tradeLeverageInput').value = calcState.leverage;
+        
+        if (calcState.dir === 'LONG') fDirLong?.click();
+        else fDirShort?.click();
+
+        closeCalc();
+      });
+
+      // JSON Backup Modal
+      const modalBackup = document.getElementById('modalBackup');
+      const jsonTextarea = document.getElementById('jsonBackupTextarea');
+      const jsonStatusMsg = document.getElementById('jsonBackupStatusMsg');
+
+      document.getElementById('openBackupModalBtn')?.addEventListener('click', () => {
+        if (jsonTextarea) jsonTextarea.value = JSON.stringify(state, null, 2);
+        if (jsonStatusMsg) jsonStatusMsg.classList.add('hidden');
+        modalBackup.classList.remove('hidden');
+      });
+
+      document.getElementById('closeBackupModalBtn')?.addEventListener('click', () => {
+        modalBackup.classList.add('hidden');
+      });
+
+      document.getElementById('copyJsonTextBtn')?.addEventListener('click', () => {
+        if (!jsonTextarea) return;
+        jsonTextarea.select();
+        document.execCommand('copy');
+        if (jsonStatusMsg) {
+          jsonStatusMsg.innerText = '✓ Скопировано в буфер';
+          jsonStatusMsg.className = 'font-mono text-emerald-400';
+          jsonStatusMsg.classList.remove('hidden');
+          setTimeout(() => jsonStatusMsg.classList.add('hidden'), 2500);
+        }
+      });
+
+      document.getElementById('applyJsonTextImportBtn')?.addEventListener('click', () => {
+        if (!jsonTextarea) return;
+        const text = jsonTextarea.value.trim();
+        if (!text) return;
+
+        try {
+          const parsed = JSON.parse(text);
+          state = { ...DEFAULT_DATA, ...parsed };
+          saveState();
+          if (jsonStatusMsg) {
+            jsonStatusMsg.innerText = '✓ Данные успешно импортированы!';
+            jsonStatusMsg.className = 'font-mono text-emerald-400 font-bold';
+            jsonStatusMsg.classList.remove('hidden');
+          }
+          setTimeout(() => modalBackup.classList.add('hidden'), 800);
+        } catch (err) {
+          if (jsonStatusMsg) {
+            jsonStatusMsg.innerText = '✕ Ошибка: некорректный JSON синтаксис';
+            jsonStatusMsg.className = 'font-mono text-rose-400 font-bold';
+            jsonStatusMsg.classList.remove('hidden');
+          }
+        }
+      });
+
+      document.getElementById('exportJsonFileBtn')?.addEventListener('click', () => {
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `ONANDERFINANCE_${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+      });
+
+      document.getElementById('resetDataBtn')?.addEventListener('click', () => {
+        state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        saveState();
+        if (jsonTextarea) jsonTextarea.value = JSON.stringify(state, null, 2);
+      });
+
+      // Goal Modal
+      const modalGoal = document.getElementById('modalGoal');
+      document.getElementById('editGoalBtn')?.addEventListener('click', () => {
+        const goal = state.goal || DEFAULT_DATA.goal;
+        document.getElementById('goalTitleInput').value = goal.title;
+        document.getElementById('goalAmountInput').value = goal.targetAmount;
+        modalGoal.classList.remove('hidden');
+      });
+
+      document.getElementById('closeGoalModalBtn')?.addEventListener('click', () => {
+        modalGoal.classList.add('hidden');
+      });
+
+      document.getElementById('saveGoalBtn')?.addEventListener('click', () => {
+        const title = document.getElementById('goalTitleInput').value.trim();
+        const amt = parseFloat(document.getElementById('goalAmountInput').value);
+        if (title && amt > 0) {
+          state.goal = { title, targetAmount: amt };
+          saveState();
+          modalGoal.classList.add('hidden');
+        }
+      });
+
+      // Edit Crypto Deposit Modal Handlers
+      const modalEditDeposit = document.getElementById('modalEditDeposit');
+      document.getElementById('editCryptoDepositBtn')?.addEventListener('click', () => {
+        document.getElementById('cryptoDepositInput').value = parseFloat(state.cryptoDeposit) || 0;
+        modalEditDeposit?.classList.remove('hidden');
+      });
+
+      document.getElementById('closeDepositModalBtn')?.addEventListener('click', () => {
+        modalEditDeposit?.classList.add('hidden');
+      });
+
+      document.getElementById('saveCryptoDepositBtn')?.addEventListener('click', () => {
+        const newDep = parseFloat(document.getElementById('cryptoDepositInput')?.value);
+        if (!isNaN(newDep)) {
+          state.cryptoDeposit = newDep;
+          saveState();
+          modalEditDeposit?.classList.add('hidden');
+        }
+      });
+
+      // Add New Account Modal Handlers
+      const modalAddAccount = document.getElementById('modalAddAccount');
+      document.getElementById('addAccountBtn')?.addEventListener('click', () => {
+        document.getElementById('newAccountNameInput').value = '';
+        document.getElementById('newAccountBalanceInput').value = '0';
+        modalAddAccount?.classList.remove('hidden');
+      });
+
+      document.getElementById('closeAddAccountModalBtn')?.addEventListener('click', () => {
+        modalAddAccount?.classList.add('hidden');
+      });
+
+      document.getElementById('saveNewAccountBtn')?.addEventListener('click', () => {
+        const name = document.getElementById('newAccountNameInput')?.value.trim();
+        const bal = parseFloat(document.getElementById('newAccountBalanceInput')?.value) || 0;
+        if (name) {
+          state.cardAccounts.push({
+            id: 'acc_' + Date.now(),
+            name,
+            balance: bal,
+            color: 'sky'
+          });
+          saveState();
+          modalAddAccount?.classList.add('hidden');
+        }
+      });
+
+      // Initial Render
+      if (state.lang) applyLanguage(state.lang);
+      renderAll();
+    });
+  </script>
+</body>
+</html>
